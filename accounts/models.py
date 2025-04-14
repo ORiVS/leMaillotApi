@@ -1,5 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
+from django.db.models import OneToOneField
+
 
 class UserManager(BaseUserManager):
     def create_user(self, first_name, last_name, phone_number, username, email, password=None):
@@ -73,5 +75,25 @@ class User(AbstractBaseUser):
 
     def has_module_perms(self, app_label):
         return True
+
+class UserProfile(models.Model):
+    user = OneToOneField(User, on_delete=models.CASCADE, blank = True )
+    profile_picture = models.ImageField(upload_to='user/profile_pictures', blank = True, null = True)
+    cover_photo = models.ImageField(upload_to='user/cover_photo', blank = True, null = True)
+    address_line_1 = models.CharField(max_length=50, blank=True)
+    address_line_2 = models.CharField(max_length=50, blank=True)
+    country = models.CharField(max_length=15, blank=True)
+    state = models.CharField(max_length=15, blank=True)
+    city = models.CharField(max_length=15, blank=True)
+    pin_code = models.CharField(max_length=15, blank=True, null=True)
+    longitude = models.FloatField(max_length=15, blank=True, null=True)
+    latitude = models.FloatField(max_length=15, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    modified_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.user.email
+
+
 
 

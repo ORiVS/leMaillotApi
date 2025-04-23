@@ -1,0 +1,47 @@
+from rest_framework import serializers
+from accounts.models import User
+from vendor.models import Vendor
+
+class RegisterUserSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True)
+
+    class Meta:
+        model = User
+        fields = ['first_name', 'last_name', 'phone_number', 'username', 'email', 'password']
+
+    def validate_email(self, value):
+        if User.objects.filter(email=value).exists():
+            raise serializers.ValidationError("Cet email est déjà utilisé")
+        return value
+
+    def validate_username(self, value):
+        if User.objects.filter(username=value).exists():
+            raise serializers.ValidationError("Ce nom d’utilisateur existe déjà")
+        return value
+
+    def create(self, validated_data):
+        user = User.objects.create_user(**validated_data)
+        user.role = User.CUSTOMER
+        user.save()
+        return user
+
+class RegisterVendorSerializer(RegisterUserSerializer):
+    vendor_license = serializers.FileField(write_only=True)
+
+    class Meta(RegisterUserSerializer.Meta):
+        fields = RegisterUserSerializer.Meta.fields + ['vendor_license']
+
+    def create(self, validated_data):
+        vendor_license = validated_data.pop('vendor_license')
+        user = super().create(validated_data)
+        user.role = User.VENDOR
+        user.is_staff = True
+        user.save()
+
+        Vendor.objects.create(
+            user=user,
+            user_profile=user.userprofile,
+            vendor_name=f"{user.first_name} {user.last_name}",
+            vendor_license=vendor_license
+        )
+        return user

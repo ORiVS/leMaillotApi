@@ -4,7 +4,9 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
-from .serializers import RegisterUserSerializer, RegisterVendorSerializer
+
+from .permissions import IsVendor
+from .serializers import RegisterUserSerializer, RegisterVendorSerializer, UserSerializer, UserProfileSerializer
 
 from vendor.models import Vendor
 from accounts.models import User, UserProfile
@@ -30,21 +32,17 @@ def login(request):
     email = request.data.get('email')
     password = request.data.get('password')
 
-    try:
-        user = User.objects.get(email=email)
-        if user.check_password(password):
-            refresh = RefreshToken.for_user(user)
+    user = authenticate(request, email=email, password=password)
 
-            return Response({
-                'refresh': str(refresh),
-                'access': str(refresh.access_token),
-                'message': 'Connexion réussie'
-            }, status=status.HTTP_200_OK)
-        else:
-            return Response({'error': 'Mot de passe incorrect'}, status=status.HTTP_401_UNAUTHORIZED)
-    except User.DoesNotExist:
-        return Response({'error': 'Utilisateur non trouvé'}, status=status.HTTP_404_NOT_FOUND)
-
+    if user is not None:
+        refresh = RefreshToken.for_user(user)
+        return Response({
+            'refresh': str(refresh),
+            'access': str(refresh.access_token),
+            'message': 'Connexion réussie'
+        }, status=status.HTTP_200_OK)
+    else:
+        return Response({'error': 'Email ou mot de passe invalide'}, status=status.HTTP_401_UNAUTHORIZED)
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def logout(request):
@@ -55,3 +53,30 @@ def logout(request):
         return Response({'message': 'Déconnexion réussie'}, status=status.HTTP_200_OK)
     except Exception as e:
         return Response({'error': 'Une erreur s\'est produite'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsVendor])
+def vendor_dashboard(request):
+    return Response({'message': 'Bienvenue sur le dashboard vendeur'})
+
+from accounts.permissions import IsCustomer
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsCustomer])
+def customer_dashboard(request):
+    return Response({'message': 'Bienvenue sur le dashboard client'})
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_me(request):
+    user = request.user
+    user_profile = user.userprofile
+
+    user_data = UserSerializer(user).data
+    profile_data = UserProfileSerializer(user_profile).data
+
+    return Response({
+        'user': user_data,
+        'profile': profile_data
+    })

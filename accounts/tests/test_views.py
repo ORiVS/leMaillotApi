@@ -78,3 +78,30 @@ class AuthViewTests(APITestCase):
     def test_logout_without_token(self):
         response = self.client.post(self.logout_url, {})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+class MeViewTest(APITestCase):
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            email="me@example.com",
+            username="meuser",
+            first_name="Me",
+            last_name="User",
+            phone_number="22991111111",
+            password="securepass"
+        )
+        self.url = reverse('get_me')
+        refresh = RefreshToken.for_user(self.user)
+        self.access_token = str(refresh.access_token)
+
+    def test_get_me_authenticated(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.access_token}')
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['user']['email'], self.user.email)
+        self.assertEqual(response.data['user']['username'], self.user.username)
+        self.assertIn('profile', response.data)
+
+    def test_get_me_unauthenticated(self):
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)

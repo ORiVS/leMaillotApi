@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from accounts.models import User
+from accounts.models import User, UserProfile
 from vendor.models import Vendor
 
 class RegisterUserSerializer(serializers.ModelSerializer):
@@ -45,3 +45,16 @@ class RegisterVendorSerializer(RegisterUserSerializer):
             vendor_license=vendor_license
         )
         return user
+
+class UserSerializer(serializers.ModelSerializer):
+    role_display = serializers.CharField(source='get_role_display', read_only=True)
+
+    class Meta:
+        model = User
+        fields = ['id', 'email', 'username', 'first_name', 'last_name', 'phone_number', 'role', 'role_display']
+
+
+class UserProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserProfile
+        exclude = ['user']

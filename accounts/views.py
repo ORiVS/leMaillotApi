@@ -1,16 +1,20 @@
-from django.contrib import messages
+from email.message import EmailMessage
+
 from django.contrib.auth import authenticate, get_user_model
 from django.contrib.auth.tokens import default_token_generator
+from django.contrib.sites.shortcuts import get_current_site
 from django.http import HttpResponse
-from django.shortcuts import redirect
-from django.utils.encoding import force_str
-from django.utils.http import urlsafe_base64_decode
+from django.template.loader import render_to_string
+from django.utils.encoding import force_str, force_bytes
+from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
 from accounts.permissions import IsCustomer
+from django.core.mail import EmailMessage
+
 
 from .permissions import IsVendor
 from .serializers import RegisterUserSerializer, RegisterVendorSerializer, UserSerializer, UserProfileSerializer
@@ -106,3 +110,48 @@ def activate_account(request, uidb64, token):
             return HttpResponse("<h2>✅ Ce compte est déjà activé.</h2>")
     else:
         return HttpResponse("<h2>⚠️ Lien invalide ou expiré.</h2>")
+
+
+@api_view(['POST'])
+def forgot_password(request):
+    email = request.data.get('email')
+    if not email:
+        return Response({'error': 'Email requis.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        user = User.objects.get(email=email)
+        current_site = get_current_site(request)
+        mail_subject = "Réinitialisez votre mot de passe"
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+        token = default_token_generator.make_token(user)
+        reset_url = f"http://{current_site.domain}/accounts/reset-password/{uid}/{token}/"
+        message = render_to_string('accounts/emails/reset_password_email.html', {
+            'user': user,
+            'reset_url': reset_url,
+        })
+        email = EmailMessage(mail_subject, message, to=[user.email])
+        email.content_subtype = "html"
+        email.send()
+        return Response({'message': 'Un email de réinitialisation a été envoyé.'})
+    except User.DoesNotExist:
+        return Response({'error': 'Utilisateur non trouvé.'}, status=status.HTTP_404_NOT_FOUND)
+
+
+@api_view(['POST'])
+def reset_password(request, uidb64, token):
+    password = request.data.get('password')
+    if not password:
+        return Response({'error': 'Nouveau mot de passe requis.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        uid = urlsafe_base64_decode(uidb64).decode()
+        user = User.objects.get(pk=uid)
+    except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+        return Response({'error': 'Lien invalide.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    if default_token_generator.check_token(user, token):
+        user.set_password(password)
+        user.save()
+        return Response({'message': 'Mot de passe réinitialisé avec succès !'})
+    else:
+        return Response({'error': 'Token invalide ou expiré.'}, status=status.HTTP_400_BAD_REQUEST)

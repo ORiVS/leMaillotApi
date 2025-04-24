@@ -1,6 +1,6 @@
 from django.urls import path
 from . import views
-from .views import get_me, activate_account
+from .views import get_me, activate_account, reset_password, forgot_password
 
 urlpatterns = [
     path('registerUser/', views.registerUser, name='registerUser'),
@@ -14,4 +14,6 @@ urlpatterns = [
 
     path('activate/<uidb64>/<token>/', activate_account, name='activate'),
 
+    path('forgot-password/', forgot_password, name='forgot-password'),
+    path('reset-password/<uidb64>/<token>/', reset_password, name='reset-password'),
 ]

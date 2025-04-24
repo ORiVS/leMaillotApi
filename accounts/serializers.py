@@ -1,5 +1,6 @@
-from rest_framework import serializers
+from rest_framework import serializers, request
 from accounts.models import User, UserProfile
+from accounts.utils import send_verification_email
 from vendor.models import Vendor
 
 class RegisterUserSerializer(serializers.ModelSerializer):
@@ -22,7 +23,13 @@ class RegisterUserSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         user = User.objects.create_user(**validated_data)
         user.role = User.CUSTOMER
+        user.is_active = False
         user.save()
+
+        #send email verification
+        request = self.context.get('request')
+        send_verification_email(request, user)
+
         return user
 
 class RegisterVendorSerializer(RegisterUserSerializer):
@@ -33,7 +40,8 @@ class RegisterVendorSerializer(RegisterUserSerializer):
 
     def create(self, validated_data):
         vendor_license = validated_data.pop('vendor_license')
-        user = super().create(validated_data)
+        user = super(RegisterVendorSerializer, self).create(validated_data)
+
         user.role = User.VENDOR
         user.is_staff = True
         user.save()

@@ -1,6 +1,9 @@
+import random
+
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
 from django.db.models import OneToOneField
+from django.utils import timezone
 
 
 class UserManager(BaseUserManager):
@@ -51,6 +54,9 @@ class User(AbstractBaseUser):
     username = models.CharField(max_length=50, unique=True)
     email = models.EmailField(max_length=100, unique=True)
     role = models.PositiveSmallIntegerField(choices=ROLE_CHOICES, blank=True, null=True)
+    is_verified = models.BooleanField(default=False)
+    verification_code = models.CharField(max_length=6, blank=True, null=True)
+    code_sent_at = models.DateTimeField(blank=True, null=True)
 
     #required fields
     date_joined = models.DateTimeField(auto_now_add=True)
@@ -58,7 +64,7 @@ class User(AbstractBaseUser):
     created_date = models.DateTimeField(auto_now_add=True)
     modified_date = models.DateTimeField(auto_now=True)
 
-    is_active = models.BooleanField(default=True)
+    is_active = models.BooleanField(default=False)
     is_admin = models.BooleanField(default=False)
     is_staff = models.BooleanField(default=False)
     is_superadmin = models.BooleanField(default=False)
@@ -75,6 +81,11 @@ class User(AbstractBaseUser):
 
     def has_module_perms(self, app_label):
         return True
+
+    def generate_verification_code(self):
+        self.verification_code = f"{random.randint(100000, 999999)}"
+        self.code_sent_at = timezone.now()
+        self.save()
 
 class UserProfile(models.Model):
     user = OneToOneField(User, on_delete=models.CASCADE, blank = True )

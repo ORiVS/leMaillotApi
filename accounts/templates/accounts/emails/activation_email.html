@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Activation de compte</title>
+</head>
+<body>
+    <h2>Bienvenue {{ user.first_name }} 👋</h2>
+    <p>Merci de t'être inscrit sur <strong>LeMaillot</strong> !</p>
+    <p>Pour activer ton compte, clique sur le bouton ci-dessous :</p>
+    <p>
+        <a href="{{ activation_url }}" style="padding: 10px 20px; background: #6b4c3b; color: white; text-decoration: none; border-radius: 5px;">
+            Activer mon compte LEMAILLOT
+        </a>
+    </p>
+    <p>Si le bouton ne fonctionne pas, copie-colle ce lien dans ton navigateur :</p>
+    <p>{{ activation_url }}</p>
+    <hr>
+    <p>Merci,</p>
+    <p>L’équipe LeMaillot</p>
+</body>
+</html>

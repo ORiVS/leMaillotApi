@@ -1,6 +1,6 @@
 from rest_framework import serializers, request
 from accounts.models import User, UserProfile
-from accounts.utils import send_verification_email
+from accounts.utils import send_verification_code_email, send_verification_code_sms
 from vendor.models import Vendor
 
 class RegisterUserSerializer(serializers.ModelSerializer):
@@ -24,6 +24,16 @@ class RegisterUserSerializer(serializers.ModelSerializer):
         user = User.objects.create_user(**validated_data)
         user.role = User.CUSTOMER
         user.is_active = False
+        user.generate_verification_code()
+
+        # Choix email ou phone à passer depuis le frontend
+        request = self.context.get('request')
+        method = request.data.get('verification_method', 'email')
+        if method == 'email':
+            send_verification_code_email(user)
+        elif method == 'phone':
+            send_verification_code_sms(user)
+
         user.save()
 
         #send email verification

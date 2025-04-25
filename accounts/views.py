@@ -1,3 +1,4 @@
+from datetime import timedelta
 from email.message import EmailMessage
 
 from django.contrib.auth import authenticate, get_user_model
@@ -5,6 +6,7 @@ from django.contrib.auth.tokens import default_token_generator
 from django.contrib.sites.shortcuts import get_current_site
 from django.http import HttpResponse
 from django.template.loader import render_to_string
+from django.utils import timezone
 from django.utils.encoding import force_str, force_bytes
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from rest_framework.decorators import api_view, permission_classes
@@ -22,6 +24,8 @@ from .serializers import RegisterUserSerializer, RegisterVendorSerializer, UserS
 from vendor.models import Vendor
 from accounts.models import User, UserProfile
 from .tokens import account_activation_token
+from .utils import send_verification_code_sms, send_verification_code_email
+
 
 @api_view(['POST'])
 def registerUser(request):
@@ -94,6 +98,7 @@ def get_me(request):
 
 User = get_user_model()
 
+"""
 def activate_account(request, uidb64, token):
     try:
         uid = urlsafe_base64_decode(uidb64).decode()
@@ -111,6 +116,7 @@ def activate_account(request, uidb64, token):
     else:
         return HttpResponse("<h2>⚠️ Lien invalide ou expiré.</h2>")
 
+"""
 
 @api_view(['POST'])
 def forgot_password(request):
@@ -155,3 +161,40 @@ def reset_password(request, uidb64, token):
         return Response({'message': 'Mot de passe réinitialisé avec succès !'})
     else:
         return Response({'error': 'Token invalide ou expiré.'}, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['POST'])
+def verify_code(request):
+    email = request.data.get('email')
+    code = request.data.get('code')
+
+    try:
+        user = User.objects.get(email=email, verification_code=code)
+
+        if user.code_sent_at and timezone.now() - user.code_sent_at > timedelta(minutes=10):
+            return Response({'error': 'Le code a expiré.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        user.is_active = True
+        user.is_verified = True
+        user.verification_code = None
+        user.save()
+        return Response({'message': 'Compte activé avec succès.'}, status=status.HTTP_200_OK)
+    except User.DoesNotExist:
+        return Response({'error': 'Code invalide ou utilisateur non trouvé.'}, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['POST'])
+def resend_code(request):
+    email = request.data.get('email')
+    method = request.data.get('method', 'email')  # 'email' ou 'phone'
+
+    try:
+        user = User.objects.get(email=email)
+        user.generate_verification_code()
+
+        if method == 'phone':
+            send_verification_code_sms(user)
+        else:
+            send_verification_code_email(user)
+
+        return Response({'message': 'Code renvoyé avec succès.'}, status=status.HTTP_200_OK)
+    except User.DoesNotExist:
+        return Response({'error': 'Utilisateur introuvable.'}, status=status.HTTP_404_NOT_FOUND)

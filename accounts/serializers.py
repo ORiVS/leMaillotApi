@@ -1,3 +1,5 @@
+from datetime import timezone, timedelta
+
 from rest_framework import serializers, request
 from accounts.models import User, UserProfile
 from accounts.utils import send_verification_code_email, send_verification_code_sms
@@ -26,19 +28,15 @@ class RegisterUserSerializer(serializers.ModelSerializer):
         user.is_active = False
         user.generate_verification_code()
 
-        # Choix email ou phone à passer depuis le frontend
         request = self.context.get('request')
-        method = request.data.get('verification_method', 'email')
-        if method == 'email':
-            send_verification_code_email(user)
-        elif method == 'phone':
+        method = request.data.get('verification_method', 'email') if request else 'email'
+
+        if method == 'phone':
             send_verification_code_sms(user)
+        else:
+            send_verification_code_email(user)
 
         user.save()
-
-        #send email verification
-        request = self.context.get('request')
-        send_verification_email(request, user)
 
         return user
 
@@ -49,13 +47,21 @@ class RegisterVendorSerializer(RegisterUserSerializer):
         fields = RegisterUserSerializer.Meta.fields + ['vendor_license']
 
     def create(self, validated_data):
-        vendor_license = validated_data.pop('vendor_license')
-        user = super(RegisterVendorSerializer, self).create(validated_data)
+        # ⚠️ Retirer vendor_license du dict pour éviter l'erreur
+        request = self.context.get('request')
+        vendor_license = request.FILES.get('vendor_license') if request else None
 
+        # Supprimer le champ du validated_data pour éviter l'erreur
+        if 'vendor_license' in validated_data:
+            validated_data.pop('vendor_license')
+
+        # Création de l'utilisateur (sans vendor_license)
+        user = super(RegisterVendorSerializer, self).create(validated_data)
         user.role = User.VENDOR
         user.is_staff = True
         user.save()
 
+        # Création du vendeur avec la licence
         Vendor.objects.create(
             user=user,
             user_profile=user.userprofile,
@@ -76,3 +82,33 @@ class UserProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserProfile
         exclude = ['user']
+
+
+class VerifyOTPSerializer(serializers.Serializer):
+    phone_number = serializers.CharField()
+    code = serializers.CharField()
+
+    def validate(self, data):
+        phone = data['phone_number']
+        code = data['code']
+        try:
+            user = User.objects.get(phone_number=phone)
+        except User.DoesNotExist:
+            raise serializers.ValidationError("Utilisateur non trouvé.")
+
+        if user.verification_code != code:
+            raise serializers.ValidationError("Code incorrect.")
+
+        if user.code_sent_at and timezone.now() > user.code_sent_at + timedelta(minutes=10):
+            raise serializers.ValidationError("Code expiré.")
+
+        data['user'] = user
+        return data
+
+    def save(self, **kwargs):
+        user = self.validated_data['user']
+        user.is_verified = True
+        user.verification_code = None
+        user.code_sent_at = None
+        user.save()
+        return user

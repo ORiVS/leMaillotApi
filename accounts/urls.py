@@ -1,6 +1,6 @@
 from django.urls import path
 from . import views
-from .views import get_me, reset_password, forgot_password, verify_code, resend_code
+from .views import get_me, reset_password, forgot_password, verify_code, resend_code, VerifyOTPView
 
 urlpatterns = [
     path('registerUser/', views.registerUser, name='registerUser'),
@@ -20,5 +20,7 @@ urlpatterns = [
     path('verify-code/', verify_code, name='verify-code'),
 
     path('resend-code/', resend_code, name='resend-code'),
+
+    path('verify-otp/', VerifyOTPView.as_view(), name='verify-otp'),
 
 ]

@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>Activation de compte</title>
+  <title>Code de vérification</title>
 </head>
 <body style="font-family: Arial, sans-serif; background: #f4f4f4; padding: 20px; margin: 0;">
   <div style="max-width: 600px; margin: auto; background: #ffffff; border-radius: 10px; padding: 30px;">
@@ -11,20 +11,13 @@
       <img src="cid:lemaillot_logo" alt="Logo LeMaillot" style="max-height: 200px;" />
     </div>
 
-    <h2>Bienvenue {{ user.first_name }} 👋</h2>
+    <h2>Bonjour {{ user.first_name }} 👋</h2>
 
-    <p>Merci de t'être inscrit sur <strong>LeMaillot</strong> !</p>
-    <p>Pour activer ton compte, clique sur le bouton ci-dessous :</p>
+    <p>Voici votre code de vérification pour activer votre compte sur <strong>LeMaillot</strong> :</p>
 
-    <p style="text-align: center; margin: 30px 0;">
-      <a href="{{ activation_url }}"
-         style="display: inline-block; padding: 12px 24px; background-color: #6b4c3b; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: bold;">
-         Activer mon compte LeMaillot
-      </a>
+    <p style="font-size: 24px; font-weight: bold; color: #0b7d48; text-align: center;">
+      {{ user.verification_code }}
     </p>
-
-    <p>Si le bouton ne fonctionne pas, copie-colle ce lien dans ton navigateur :</p>
-    <p style="word-break: break-all;">{{ activation_url }}</p>
 
     <p style="margin-top: 40px; text-align: right;">— L’équipe LeMaillot ⚽</p>
     <div style="text-align: center; font-size: 13px; color: #999; margin-top: 10px;">

@@ -13,13 +13,14 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from accounts.permissions import IsCustomer
 from django.core.mail import EmailMessage
 
-
 from .permissions import IsVendor
-from .serializers import RegisterUserSerializer, RegisterVendorSerializer, UserSerializer, UserProfileSerializer
+from .serializers import RegisterUserSerializer, RegisterVendorSerializer, UserSerializer, UserProfileSerializer, \
+    VerifyOTPSerializer
 
 from vendor.models import Vendor
 from accounts.models import User, UserProfile
@@ -38,7 +39,7 @@ def registerUser(request):
 
 @api_view(['POST'])
 def registerVendor(request):
-    serializer = RegisterVendorSerializer(data=request.data)
+    serializer = RegisterVendorSerializer(data=request.data, context={'request': request})
     if serializer.is_valid():
         serializer.save()
         return Response({'message': 'Vendeur créé avec succès'}, status=status.HTTP_201_CREATED)
@@ -198,3 +199,11 @@ def resend_code(request):
         return Response({'message': 'Code renvoyé avec succès.'}, status=status.HTTP_200_OK)
     except User.DoesNotExist:
         return Response({'error': 'Utilisateur introuvable.'}, status=status.HTTP_404_NOT_FOUND)
+
+class VerifyOTPView(APIView):
+    def post(self, request):
+        serializer = VerifyOTPSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"detail": "Compte vérifié avec succès ✅"})
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

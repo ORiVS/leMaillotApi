@@ -5,6 +5,8 @@ from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
 from django.db.models import OneToOneField
 from django.utils import timezone
 
+from accounts.utils import send_verification_code_sms
+
 
 class UserManager(BaseUserManager):
     def create_user(self, first_name, last_name, phone_number, username, email, password=None):
@@ -56,6 +58,7 @@ class User(AbstractBaseUser):
     role = models.PositiveSmallIntegerField(choices=ROLE_CHOICES, blank=True, null=True)
     is_verified = models.BooleanField(default=False)
     verification_code = models.CharField(max_length=6, blank=True, null=True)
+    verification_method = models.CharField(max_length=10, choices=(("email", "Email"), ("phone", "SMS")), default="email")
     code_sent_at = models.DateTimeField(blank=True, null=True)
 
     #required fields
@@ -86,6 +89,13 @@ class User(AbstractBaseUser):
         self.verification_code = f"{random.randint(100000, 999999)}"
         self.code_sent_at = timezone.now()
         self.save()
+
+    def generate_and_send_otp(user):
+        code = str(random.randint(100000, 999999))
+        user.verification_code = code
+        user.code_sent_at = timezone.now()
+        user.save(update_fields=["verification_code", "code_sent_at"])
+        send_verification_code_sms(user)
 
 class UserProfile(models.Model):
     user = OneToOneField(User, on_delete=models.CASCADE, blank = True )

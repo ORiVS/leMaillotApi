@@ -1,3 +1,4 @@
+from django.db.models import Q
 from rest_framework import generics
 from rest_framework.exceptions import PermissionDenied
 from accounts.permissions import IsVendor
@@ -54,3 +55,41 @@ class ProductRetrieveUpdateDestroyAPIView(BaseVendorProtectedView, generics.Retr
     def get_queryset(self):
         vendor = self.get_vendor_or_403()
         return Product.objects.filter(vendor=vendor)
+
+class PublicProductListAPIView(generics.ListAPIView):
+    serializer_class = ProductSerializer
+    permission_classes = []  # Accès libre
+
+    def get_queryset(self):
+        queryset = Product.objects.filter(is_available=True)
+
+        # 🔍 Filtres GET
+        category_id = self.request.query_params.get('category')
+        if category_id:
+            queryset = queryset.filter(category_id=category_id)
+
+        min_price = self.request.query_params.get('min_price')
+        if min_price:
+            queryset = queryset.filter(price__gte=min_price)
+
+        max_price = self.request.query_params.get('max_price')
+        if max_price:
+            queryset = queryset.filter(price__lte=max_price)
+
+        vendor_id = self.request.query_params.get('vendor')
+        if vendor_id:
+            queryset = queryset.filter(vendor_id=vendor_id)
+
+        featured = self.request.query_params.get('featured')
+        if featured == "true":
+            queryset = queryset.filter(is_featured=True)
+
+        search = self.request.query_params.get('search')
+        if search:
+            queryset = queryset.filter(
+                Q(product_name__icontains=search) |
+                Q(description__icontains=search) |
+                Q(category__category_name__icontains=search)
+            )
+
+        return queryset.order_by('-created_at')

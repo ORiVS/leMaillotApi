@@ -52,6 +52,8 @@ INSTALLED_APPS = [
     'vendor',
     'django_twilio',
     'category',
+    'order',
+
 ]
 
 MIDDLEWARE = [

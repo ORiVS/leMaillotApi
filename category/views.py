@@ -1,39 +1,56 @@
-from django.shortcuts import render
-
-from rest_framework import generics, permissions
+from rest_framework import generics
+from rest_framework.exceptions import PermissionDenied
+from accounts.permissions import IsVendor
 from .models import Category, Product
 from .serializers import CategorySerializer, ProductSerializer
 
-class CategoryListCreateAPIView(generics.ListCreateAPIView):
+class BaseVendorProtectedView:
+    def get_vendor_or_403(self):
+        try:
+            return self.request.user.vendor
+        except Exception:
+            raise PermissionDenied("Aucun profil vendeur associé à ce compte.")
+
+
+class CategoryListCreateAPIView(BaseVendorProtectedView, generics.ListCreateAPIView):
     serializer_class = CategorySerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsVendor]
 
     def get_queryset(self):
-        return Category.objects.filter(vendor=self.request.user.vendor)
+        vendor = self.get_vendor_or_403()
+        return Category.objects.filter(vendor=vendor)
 
     def perform_create(self, serializer):
-        serializer.save(vendor=self.request.user.vendor)
+        vendor = self.get_vendor_or_403()
+        serializer.save(vendor=vendor)
 
-class CategoryRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
+
+class CategoryRetrieveUpdateDestroyAPIView(BaseVendorProtectedView, generics.RetrieveUpdateDestroyAPIView):
     serializer_class = CategorySerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsVendor]
 
     def get_queryset(self):
-        return Category.objects.filter(vendor=self.request.user.vendor)
+        vendor = self.get_vendor_or_403()
+        return Category.objects.filter(vendor=vendor)
 
-class ProductListCreateAPIView(generics.ListCreateAPIView):
+
+class ProductListCreateAPIView(BaseVendorProtectedView, generics.ListCreateAPIView):
     serializer_class = ProductSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsVendor]
 
     def get_queryset(self):
-        return Product.objects.filter(vendor=self.request.user.vendor)
+        vendor = self.get_vendor_or_403()
+        return Product.objects.filter(vendor=vendor)
 
     def perform_create(self, serializer):
-        serializer.save(vendor=self.request.user.vendor)
+        vendor = self.get_vendor_or_403()
+        serializer.save(vendor=vendor)
 
-class ProductRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
+
+class ProductRetrieveUpdateDestroyAPIView(BaseVendorProtectedView, generics.RetrieveUpdateDestroyAPIView):
     serializer_class = ProductSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsVendor]
 
     def get_queryset(self):
-        return Product.objects.filter(vendor=self.request.user.vendor)
+        vendor = self.get_vendor_or_403()
+        return Product.objects.filter(vendor=vendor)

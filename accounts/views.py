@@ -17,6 +17,9 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from accounts.permissions import IsCustomer
 from django.core.mail import EmailMessage
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
+
 
 from .permissions import IsVendor
 from .serializers import RegisterUserSerializer, RegisterVendorSerializer, UserSerializer, UserProfileSerializer, \
@@ -28,6 +31,11 @@ from .tokens import account_activation_token
 from .utils import send_verification_code_sms, send_verification_code_email
 
 
+@swagger_auto_schema(
+    method='post',
+    request_body=RegisterUserSerializer,
+    responses={201: 'Utilisateur créé', 400: 'Erreur de validation'}
+)
 @api_view(['POST'])
 def registerUser(request):
     serializer = RegisterUserSerializer(data=request.data, context={'request': request})
@@ -37,6 +45,11 @@ def registerUser(request):
         return Response({'message': 'Utilisateur créé avec succès'}, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+@swagger_auto_schema(
+    method='post',
+    request_body=RegisterVendorSerializer,
+    responses={201: 'Vendeur créé', 400: 'Erreur de validation'}
+)
 @api_view(['POST'])
 def registerVendor(request):
     serializer = RegisterVendorSerializer(data=request.data, context={'request': request})
@@ -45,23 +58,53 @@ def registerVendor(request):
         return Response({'message': 'Vendeur créé avec succès'}, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+@swagger_auto_schema(
+    method='post',
+    request_body=RegisterVendorSerializer,
+    responses={200: 'Vous êtes maintenant vendeur', 400: 'Erreur'}
+)
 @api_view(['POST'])
-def login(request):
-    email = request.data.get('email')
-    password = request.data.get('password')
+@permission_classes([IsAuthenticated])
+def registerVendor(request):
+    user = request.user
 
-    user = authenticate(request, email=email, password=password)
+    if user.role == 'VENDOR':
+        return Response({'error': 'Vous êtes déjà vendeur.'}, status=400)
 
-    if user is not None:
-        refresh = RefreshToken.for_user(user)
-        return Response({
-            'refresh': str(refresh),
-            'access': str(refresh.access_token),
-            'message': 'Connexion réussie'
-        }, status=status.HTTP_200_OK)
-    else:
-        return Response({'error': 'Email ou mot de passe invalide'}, status=status.HTTP_401_UNAUTHORIZED)
+    serializer = RegisterVendorSerializer(data=request.data, context={'request': request})
+    if serializer.is_valid():
+        # Crée la boutique (Vendor)
+        Vendor.objects.create(
+            user=user,
+            vendor_name=serializer.validated_data['vendor_name'],
+            phone_number=serializer.validated_data['phone_number']
+        )
 
+        # Crée la boutique (Vendor)
+        Vendor.objects.create(
+            user=user,
+            user_profile=user.userprofile,
+            vendor_name=vendor_name,
+            phone_number=phone_number
+        )
+
+        # Met à jour le rôle
+        user.role = 'VENDOR'
+        user.save()
+        return Response({'message': 'Vous êtes maintenant vendeur.'}, status=200)
+    return Response(serializer.errors, status=400)
+
+@swagger_auto_schema(
+    method='post',
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        required=['refresh'],
+        properties={
+            'refresh': openapi.Schema(type=openapi.TYPE_STRING)
+        }
+    ),
+    responses={200: 'Déconnexion réussie', 400: 'Erreur'}
+)
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def logout(request):
@@ -119,6 +162,17 @@ def activate_account(request, uidb64, token):
 
 """
 
+@swagger_auto_schema(
+    method='post',
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        required=['email'],
+        properties={
+            'email': openapi.Schema(type=openapi.TYPE_STRING, format='email')
+        }
+    ),
+    responses={200: 'Email envoyé', 404: 'Utilisateur introuvable'}
+)
 @api_view(['POST'])
 def forgot_password(request):
     email = request.data.get('email')
@@ -143,7 +197,17 @@ def forgot_password(request):
     except User.DoesNotExist:
         return Response({'error': 'Utilisateur non trouvé.'}, status=status.HTTP_404_NOT_FOUND)
 
-
+@swagger_auto_schema(
+    method='post',
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        required=['password'],
+        properties={
+            'password': openapi.Schema(type=openapi.TYPE_STRING)
+        }
+    ),
+    responses={200: 'Mot de passe réinitialisé', 400: 'Lien ou token invalide'}
+)
 @api_view(['POST'])
 def reset_password(request, uidb64, token):
     password = request.data.get('password')
@@ -163,6 +227,18 @@ def reset_password(request, uidb64, token):
     else:
         return Response({'error': 'Token invalide ou expiré.'}, status=status.HTTP_400_BAD_REQUEST)
 
+@swagger_auto_schema(
+    method='post',
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        required=['email', 'code'],
+        properties={
+            'email': openapi.Schema(type=openapi.TYPE_STRING),
+            'code': openapi.Schema(type=openapi.TYPE_STRING)
+        }
+    ),
+    responses={200: 'Compte activé', 400: 'Code invalide'}
+)
 @api_view(['POST'])
 def verify_code(request):
     email = request.data.get('email')
@@ -182,6 +258,18 @@ def verify_code(request):
     except User.DoesNotExist:
         return Response({'error': 'Code invalide ou utilisateur non trouvé.'}, status=status.HTTP_400_BAD_REQUEST)
 
+@swagger_auto_schema(
+    method='post',
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        required=['email'],
+        properties={
+            'email': openapi.Schema(type=openapi.TYPE_STRING),
+            'method': openapi.Schema(type=openapi.TYPE_STRING, enum=['email', 'phone'])
+        }
+    ),
+    responses={200: 'Code renvoyé', 404: 'Utilisateur introuvable'}
+)
 @api_view(['POST'])
 def resend_code(request):
     email = request.data.get('email')
@@ -201,6 +289,10 @@ def resend_code(request):
         return Response({'error': 'Utilisateur introuvable.'}, status=status.HTTP_404_NOT_FOUND)
 
 class VerifyOTPView(APIView):
+    @swagger_auto_schema(
+        request_body=VerifyOTPSerializer,
+        responses={200: 'Compte vérifié', 400: 'Erreur de validation'}
+    )
     def post(self, request):
         serializer = VerifyOTPSerializer(data=request.data)
         if serializer.is_valid():

@@ -40,35 +40,9 @@ class RegisterUserSerializer(serializers.ModelSerializer):
 
         return user
 
-class RegisterVendorSerializer(RegisterUserSerializer):
-    vendor_license = serializers.FileField(write_only=True)
-
-    class Meta(RegisterUserSerializer.Meta):
-        fields = RegisterUserSerializer.Meta.fields + ['vendor_license']
-
-    def create(self, validated_data):
-        # ⚠️ Retirer vendor_license du dict pour éviter l'erreur
-        request = self.context.get('request')
-        vendor_license = request.FILES.get('vendor_license') if request else None
-
-        # Supprimer le champ du validated_data pour éviter l'erreur
-        if 'vendor_license' in validated_data:
-            validated_data.pop('vendor_license')
-
-        # Création de l'utilisateur (sans vendor_license)
-        user = super(RegisterVendorSerializer, self).create(validated_data)
-        user.role = User.VENDOR
-        user.is_staff = True
-        user.save()
-
-        # Création du vendeur avec la licence
-        Vendor.objects.create(
-            user=user,
-            user_profile=user.userprofile,
-            vendor_name=f"{user.first_name} {user.last_name}",
-            vendor_license=vendor_license
-        )
-        return user
+class RegisterVendorSerializer(serializers.Serializer):
+    vendor_name = serializers.CharField(max_length=100)
+    phone_number = serializers.CharField(max_length=20)
 
 class UserSerializer(serializers.ModelSerializer):
     role_display = serializers.CharField(source='get_role_display', read_only=True)

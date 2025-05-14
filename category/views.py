@@ -5,6 +5,12 @@ from accounts.permissions import IsVendor
 from .models import Category, Product
 from .serializers import CategorySerializer, ProductSerializer
 
+# 🔓 Vue publique pour afficher toutes les catégories
+class PublicCategoryListAPIView(generics.ListAPIView):
+    queryset = Category.objects.all().order_by('category_name')
+    serializer_class = CategorySerializer
+    permission_classes = []
+
 class BaseVendorProtectedView:
     def get_vendor_or_403(self):
         try:
@@ -12,36 +18,13 @@ class BaseVendorProtectedView:
         except Exception:
             raise PermissionDenied("Aucun profil vendeur associé à ce compte.")
 
-
-class CategoryListCreateAPIView(BaseVendorProtectedView, generics.ListCreateAPIView):
-    serializer_class = CategorySerializer
-    permission_classes = [IsVendor]
-
-    def get_queryset(self):
-        vendor = self.get_vendor_or_403()
-        return Category.objects.filter(vendor=vendor)
-
-    def perform_create(self, serializer):
-        vendor = self.get_vendor_or_403()
-        serializer.save(vendor=vendor)
-
-
-class CategoryRetrieveUpdateDestroyAPIView(BaseVendorProtectedView, generics.RetrieveUpdateDestroyAPIView):
-    serializer_class = CategorySerializer
-    permission_classes = [IsVendor]
-
-    def get_queryset(self):
-        vendor = self.get_vendor_or_403()
-        return Category.objects.filter(vendor=vendor)
-
-
+# 🛒 CRUD des produits par les vendeurs
 class ProductListCreateAPIView(BaseVendorProtectedView, generics.ListCreateAPIView):
     serializer_class = ProductSerializer
     permission_classes = [IsVendor]
 
     def get_queryset(self):
-        vendor = self.get_vendor_or_403()
-        return Product.objects.filter(vendor=vendor)
+        return Product.objects.filter(vendor=self.get_vendor_or_403())
 
     def perform_create(self, serializer):
         vendor = self.get_vendor_or_403()
@@ -53,8 +36,7 @@ class ProductRetrieveUpdateDestroyAPIView(BaseVendorProtectedView, generics.Retr
     permission_classes = [IsVendor]
 
     def get_queryset(self):
-        vendor = self.get_vendor_or_403()
-        return Product.objects.filter(vendor=vendor)
+        return Product.objects.filter(vendor=self.get_vendor_or_403())
 
 class PublicProductListAPIView(generics.ListAPIView):
     serializer_class = ProductSerializer

@@ -48,19 +48,6 @@ def registerUser(request):
 @swagger_auto_schema(
     method='post',
     request_body=RegisterVendorSerializer,
-    responses={201: 'Vendeur créé', 400: 'Erreur de validation'}
-)
-@api_view(['POST'])
-def registerVendor(request):
-    serializer = RegisterVendorSerializer(data=request.data, context={'request': request})
-    if serializer.is_valid():
-        serializer.save()
-        return Response({'message': 'Vendeur créé avec succès'}, status=status.HTTP_201_CREATED)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-@swagger_auto_schema(
-    method='post',
-    request_body=RegisterVendorSerializer,
     responses={200: 'Vous êtes maintenant vendeur', 400: 'Erreur'}
 )
 @api_view(['POST'])
@@ -71,14 +58,10 @@ def registerVendor(request):
     if user.role == 'VENDOR':
         return Response({'error': 'Vous êtes déjà vendeur.'}, status=400)
 
-    serializer = RegisterVendorSerializer(data=request.data, context={'request': request})
+    serializer = RegisterVendorSerializer(data=request.data)
     if serializer.is_valid():
-        # Crée la boutique (Vendor)
-        Vendor.objects.create(
-            user=user,
-            vendor_name=serializer.validated_data['vendor_name'],
-            phone_number=serializer.validated_data['phone_number']
-        )
+        vendor_name = serializer.validated_data['vendor_name']
+        phone_number = serializer.validated_data['phone_number']
 
         # Crée la boutique (Vendor)
         Vendor.objects.create(
@@ -91,8 +74,38 @@ def registerVendor(request):
         # Met à jour le rôle
         user.role = 'VENDOR'
         user.save()
+
         return Response({'message': 'Vous êtes maintenant vendeur.'}, status=200)
     return Response(serializer.errors, status=400)
+
+@swagger_auto_schema(
+    method='post',
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        required=['email', 'password'],
+        properties={
+            'email': openapi.Schema(type=openapi.TYPE_STRING, format='email'),
+            'password': openapi.Schema(type=openapi.TYPE_STRING, format='password')
+        }
+    ),
+    responses={200: 'Connexion réussie', 401: 'Identifiants invalides'}
+)
+@api_view(['POST'])
+def login(request):
+    email = request.data.get('email')
+    password = request.data.get('password')
+
+    user = authenticate(request, email=email, password=password)
+
+    if user is not None:
+        refresh = RefreshToken.for_user(user)
+        return Response({
+            'refresh': str(refresh),
+            'access': str(refresh.access_token),
+            'message': 'Connexion réussie'
+        }, status=status.HTTP_200_OK)
+    else:
+        return Response({'error': 'Email ou mot de passe invalide'}, status=status.HTTP_401_UNAUTHORIZED)
 
 @swagger_auto_schema(
     method='post',

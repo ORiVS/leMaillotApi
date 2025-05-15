@@ -39,8 +39,23 @@ class Product(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    def get_main_image_url(self):
+        main = self.gallery.filter(is_main=True).first()
+        return main.image.url if main else self.image.url
+
     def __str__(self):
         return self.product_name
 
+class ProductImage(models.Model):
+    product = models.ForeignKey('Product', on_delete=models.CASCADE, related_name='gallery')
+    image = models.ImageField(upload_to='products/gallery/')
+    alt_text = models.CharField(max_length=100, blank=True, null=True)
+    is_main = models.BooleanField(default=False)
 
+    def save(self, *args, **kwargs):
+        if self.is_main:
+            ProductImage.objects.filter(product=self.product, is_main=True).exclude(pk=self.pk).update(is_main=False)
+        super().save(*args, **kwargs)
 
+    def __str__(self):
+        return f"Image de {self.product.product_name}"

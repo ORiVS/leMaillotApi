@@ -14,6 +14,14 @@ class Order(models.Model):
     customer = models.ForeignKey(User, on_delete=models.CASCADE, related_name='orders')
     total_price = models.DecimalField(max_digits=10, decimal_places=2)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    DELIVERY_CHOICES = [
+        ('pickup', 'Retrait en boutique'),
+        ('delivery', 'Livraison à domicile'),
+    ]
+    delivery_method = models.CharField(max_length=20, choices=DELIVERY_CHOICES, default='pickup')
+    delivery_latitude = models.FloatField(null=True, blank=True)
+    delivery_longitude = models.FloatField(null=True, blank=True)
+    delivery_cost = models.DecimalField(max_digits=6, decimal_places=2, default=0.0)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

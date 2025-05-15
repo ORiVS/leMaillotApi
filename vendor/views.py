@@ -7,6 +7,9 @@ from category.serializers import ProductSerializer
 from vendor.models import Vendor
 from vendor.serializers import VendorSerializer
 
+from rest_framework.views import APIView
+from rest_framework import status
+from .utils import haversine
 
 class VendorDetailAPIView(generics.RetrieveAPIView):
     queryset = Vendor.objects.filter(is_approved=True)
@@ -38,3 +41,46 @@ class VendorRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
 
     def get_queryset(self):
         return Vendor.objects.filter(user=self.request.user)
+
+class NearbyVendorsAPIView(APIView):
+    def get(self, request):
+        try:
+            lat = float(request.query_params.get('lat'))
+            lng = float(request.query_params.get('lng'))
+            radius = float(request.query_params.get('radius', 10))  # km
+        except (TypeError, ValueError):
+            return Response({"error": "Paramètres lat, lng et radius requis."}, status=status.HTTP_400_BAD_REQUEST)
+
+        results = []
+        for vendor in Vendor.objects.filter(is_approved=True):
+            if vendor.latitude is not None and vendor.longitude is not None:
+                distance = haversine(lat, lng, vendor.latitude, vendor.longitude)
+                if distance <= radius:
+                    data = VendorSerializer(vendor).data
+                    data['distance_km'] = round(distance, 2)
+                    results.append(data)
+
+        return Response(sorted(results, key=lambda x: x['distance_km']))
+
+class NearbyProductsAPIView(APIView):
+    def get(self, request):
+        try:
+            lat = float(request.query_params.get('lat'))
+            lng = float(request.query_params.get('lng'))
+            radius = float(request.query_params.get('radius', 10))  # rayon en km
+        except (TypeError, ValueError):
+            return Response({"error": "Paramètres lat, lng et radius requis."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Filtrer les vendeurs proches
+        nearby_vendor_ids = []
+        for vendor in Vendor.objects.filter(is_approved=True):
+            if vendor.latitude is not None and vendor.longitude is not None:
+                distance = haversine(lat, lng, vendor.latitude, vendor.longitude)
+                if distance <= radius:
+                    nearby_vendor_ids.append(vendor.id)
+
+        # Récupérer les produits de ces vendeurs
+        products = Product.objects.filter(vendor__id__in=nearby_vendor_ids)
+        serialized = ProductSerializer(products, many=True)
+
+        return Response(serialized.data, status=status.HTTP_200_OK)

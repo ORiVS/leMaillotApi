@@ -25,23 +25,52 @@ class OrderItemSerializer(serializers.ModelSerializer):
 
 class OrderCreateSerializer(serializers.ModelSerializer):
     items = serializers.ListField(child=serializers.DictField(), write_only=True)
+    delivery_latitude = serializers.FloatField(required=False)
+    delivery_longitude = serializers.FloatField(required=False)
 
     class Meta:
         model = Order
-        fields = ['id', 'customer', 'status', 'total_price', 'created_at', 'items']
-        read_only_fields = ['id', 'customer', 'status', 'total_price', 'created_at']
+        fields = [
+            'id', 'customer', 'status', 'delivery_method',
+             'delivery_latitude', 'delivery_longitude',
+            'delivery_cost', 'total_price', 'created_at', 'items'
+        ]
+        read_only_fields = ['customer', 'status', 'delivery_cost', 'total_price', 'created_at']
 
     def validate_items(self, items):
         if not items:
             raise serializers.ValidationError("La commande doit contenir au moins un produit.")
         return items
 
+    def validate(self, data):
+        if data.get("delivery_method") == "delivery":
+            if not data.get("delivery_latitude") or not data.get("delivery_longitude"):
+                raise serializers.ValidationError("Coordonnées GPS requises pour la livraison.")
+        return data
+
     def create(self, validated_data):
         items_data = validated_data.pop('items')
         customer = self.context['request'].user
+        request = self.context.get('request')
+
+        delivery_method = request.data.get('delivery_method', 'pickup')
+        delivery_latitude = request.data.get('delivery_latitude')
+        delivery_longitude = request.data.get('delivery_longitude')
+
+        delivery_cost = 0.0
         total_price = 0
 
-        order = Order.objects.create(customer=customer, total_price=0)
+        # ➕ Crée la commande vide, à compléter ensuite
+        order = Order.objects.create(
+            customer=customer,
+            delivery_method=delivery_method,
+            delivery_latitude=delivery_latitude,
+            delivery_longitude=delivery_longitude,
+            delivery_cost=0.0,
+            total_price=0
+        )
+
+        vendor_ids = set()
 
         for item in items_data:
             product_id = item.get('product')
@@ -52,7 +81,6 @@ class OrderCreateSerializer(serializers.ModelSerializer):
             except Product.DoesNotExist:
                 raise serializers.ValidationError(f"Produit invalide ou indisponible : ID {product_id}")
 
-            # ✅ Vérifie le stock disponible
             if product.stock < quantity:
                 raise serializers.ValidationError(
                     f"Stock insuffisant pour le produit '{product.product_name}' (stock actuel : {product.stock})"
@@ -61,7 +89,7 @@ class OrderCreateSerializer(serializers.ModelSerializer):
             price = product.price
             total_price += price * quantity
 
-            # ✅ Création de l'item
+            # ➕ Ajout de l'article
             OrderItem.objects.create(
                 order=order,
                 product=product,
@@ -69,13 +97,25 @@ class OrderCreateSerializer(serializers.ModelSerializer):
                 price=price
             )
 
-            # ✅ Mise à jour du stock produit
+            # ➖ Mise à jour du stock
             product.stock -= quantity
             product.save()
 
-        order.total_price = total_price
+            vendor_ids.add(product.vendor.id)
+
+        # 🛵 Frais de livraison si mode "delivery"
+        if delivery_method == 'delivery':
+            from vendor.models import Vendor
+            for vid in vendor_ids:
+                vendor = Vendor.objects.get(id=vid)
+                delivery_cost += float(vendor.delivery_fee)
+
+        order.delivery_cost = delivery_cost
+        order.total_price = total_price + delivery_cost
         order.save()
+
         return order
+
 
 class OrderStatusHistorySerializer(serializers.ModelSerializer):
     changed_by_email = serializers.EmailField(source='changed_by.email', read_only=True)
@@ -91,7 +131,11 @@ class OrderDetailSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Order
-        fields = ['id', 'customer_email', 'total_price', 'status', 'created_at', 'items', 'status_history']
+        fields = [
+            'id', 'customer_email', 'total_price', 'delivery_cost', 'delivery_method',
+            'status', 'created_at', 'items', 'status_history'
+        ]
+
 
 class OrderStatusUpdateSerializer(serializers.ModelSerializer):
     class Meta:
@@ -162,6 +206,12 @@ class ExportOrderPDFAPIView(APIView):
 
         # ✅ Total
         elements.append(Paragraph(f"<b>Total à payer :</b> {order.total_price:.2f} €", styles['Heading2']))
+        # 🛵 Méthode de livraison
+        elements.append(Paragraph(
+            f"<b>Mode de livraison :</b> {'Livraison à domicile' if order.delivery_method == 'delivery' else 'Retrait en boutique'}",
+            styles['Normal']))
+        elements.append(Paragraph(f"<b>Frais de livraison :</b> {order.delivery_cost:.2f} €", styles['Normal']))
+        elements.append(Spacer(1, 12))
 
         doc.build(elements)
         return response

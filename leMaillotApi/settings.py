@@ -53,7 +53,9 @@ INSTALLED_APPS = [
     'django_twilio',
     'category',
     'order',
-    'drf_yasg'
+    'drf_yasg',
+    'cart',
+
 
 ]
 

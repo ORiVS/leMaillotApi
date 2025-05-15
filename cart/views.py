@@ -1,9 +1,12 @@
 from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework import status
 from .models import Cart, CartItem
 from category.models import Product
 from .serializers import CartSerializer, CartItemSerializer
+from rest_framework.views import APIView
+
 
 class CartDetailAPIView(generics.RetrieveAPIView):
     serializer_class = CartSerializer
@@ -63,44 +66,50 @@ class UpdateCartItemQuantityAPIView(APIView):
         quantity = request.data.get('quantity')
 
         if not product_id or quantity is None:
-            return Response({"error": "Product ID et quantity sont requis."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "Product ID et quantity sont requis."}, status=400)
 
         try:
             product = Product.objects.get(id=product_id)
         except Product.DoesNotExist:
-            return Response({"error": "Produit introuvable."}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"error": "Produit introuvable."}, status=404)
+
+        cart = Cart.objects.filter(user=user).first()
+        if not cart:
+            return Response({"error": "Aucun panier trouvé."}, status=404)
 
         try:
-            cart_item = CartItem.objects.get(user=user, product=product)
+            cart_item = CartItem.objects.get(cart=cart, product=product)
         except CartItem.DoesNotExist:
-            return Response({"error": "Ce produit n’est pas dans votre panier."}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"error": "Produit non présent dans le panier."}, status=404)
 
+        quantity = int(quantity)
         if quantity < 1:
             cart_item.delete()
-            return Response({"message": "Produit supprimé du panier car la quantité est inférieure à 1."}, status=status.HTTP_200_OK)
+            return Response({"message": "Produit supprimé du panier."}, status=200)
 
         cart_item.quantity = quantity
         cart_item.save()
-        return Response({"message": "Quantité mise à jour avec succès."}, status=status.HTTP_200_OK)
+        return Response({"message": "Quantité mise à jour avec succès."}, status=200)
 
 class CartTotalAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
         user = request.user
-        cart_items = CartItem.objects.filter(user=user)
+        cart = Cart.objects.filter(user=user).first()
+        if not cart:
+            return Response({"total": 0.0}, status=200)
 
-        if not cart_items.exists():
-            return Response({"total": 0.0}, status=status.HTTP_200_OK)
-
-        total = sum(item.product.price * item.quantity for item in cart_items)
-
-        return Response({"total": float(total)}, status=status.HTTP_200_OK)
+        total = sum(item.product.price * item.quantity for item in cart.items.all())
+        return Response({"total": float(total)}, status=200)
 
 class ClearCartAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def delete(self, request):
-        user = request.user
-        CartItem.objects.filter(user=user).delete()
-        return Response({"message": "Panier vidé avec succès."}, status=status.HTTP_200_OK)
+        cart = Cart.objects.filter(user=request.user).first()
+        if not cart:
+            return Response({"message": "Aucun panier à vider."}, status=200)
+
+        cart.items.all().delete()
+        return Response({"message": "Panier vidé avec succès."}, status=200)

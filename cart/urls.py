@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import CartDetailAPIView, AddToCartAPIView, RemoveFromCartAPIView
+from .views import CartDetailAPIView, AddToCartAPIView, RemoveFromCartAPIView, UpdateCartItemQuantityAPIView, CartTotalAPIView, ClearCartAPIView
 
 urlpatterns = [
     path('', CartDetailAPIView.as_view(), name='cart-detail'),

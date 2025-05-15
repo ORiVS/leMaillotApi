@@ -11,6 +11,8 @@ class Vendor (models.Model):
     vendor_license =models.ImageField(upload_to='vendor/license', null=True, blank=True)
     is_approved = models.BooleanField(default=False)
     slug = models.SlugField(blank=True)
+    latitude = models.FloatField(null=True, blank=True)
+    longitude = models.FloatField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     modified_at = models.DateTimeField(auto_now=True)
 

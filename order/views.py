@@ -111,7 +111,7 @@ class VendorOrderListAPIView(generics.ListAPIView):
         return queryset.order_by('-created_at')
 
 class VendorOrderDetailAPIView(generics.RetrieveAPIView):
-    serializer_class = OrderDetailSerializer
+    serializer_class = VendorOrderDetailSerializer
     permission_classes = [permissions.IsAuthenticated]
     lookup_field = 'pk'
 
@@ -122,11 +122,17 @@ class VendorOrderDetailAPIView(generics.RetrieveAPIView):
         return Order.objects.filter(items__product__vendor=user.vendor).distinct()
 
     def get_object(self):
-        queryset = self.get_queryset()
-        try:
-            return queryset.get(pk=self.kwargs['pk'])
-        except Order.DoesNotExist:
-            raise NotFound("Commande introuvable ou non accessible.")
+        obj = super().get_object()
+        user = self.request.user
+        if not obj.items.filter(product__vendor=user.vendor).exists():
+            raise PermissionDenied("Vous ne pouvez pas accéder à cette commande.")
+        return obj
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['request'] = self.request
+        return context
+
 
 class AdminOrderListAPIView(generics.ListAPIView):
     serializer_class = OrderDetailSerializer

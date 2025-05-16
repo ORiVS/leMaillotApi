@@ -136,6 +136,43 @@ class OrderDetailSerializer(serializers.ModelSerializer):
             'status', 'created_at', 'items', 'status_history'
         ]
 
+class VendorOrderDetailSerializer(serializers.ModelSerializer):
+    items = serializers.SerializerMethodField()
+    total_price = serializers.SerializerMethodField()
+    customer_email = serializers.EmailField(source='customer.email', read_only=True)
+
+    class Meta:
+        model = Order
+        fields = [
+            'id',
+            'customer_email',
+            'delivery_method',
+            'delivery_cost',  # total global, ou tu peux le cacher
+            'status',
+            'created_at',
+            'items',
+            'total_price',  # total partiel (produits du vendeur)
+        ]
+
+    def get_items(self, obj):
+        """Retourne uniquement les items du vendeur connecté"""
+        user = self.context['request'].user
+        if not hasattr(user, 'vendor'):
+            return []
+
+        items = obj.items.filter(product__vendor=user.vendor)
+        return OrderItemSerializer(items, many=True).data
+
+    def get_total_price(self, obj):
+        """Calcule le total partiel (uniquement les produits du vendeur)"""
+        user = self.context['request'].user
+        if not hasattr(user, 'vendor'):
+            return 0.0
+
+        items = obj.items.filter(product__vendor=user.vendor)
+        return sum(item.price * item.quantity for item in items)
+
+
 
 class OrderStatusUpdateSerializer(serializers.ModelSerializer):
     class Meta:

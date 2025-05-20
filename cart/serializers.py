@@ -44,4 +44,4 @@ class CartSerializer(serializers.ModelSerializer):
         return total_delivery
 
     def get_estimated_total(self, obj):
-        return self.get_total_products(obj) + self.get_delivery_estimate(obj)
+        return self.get_total_products(obj) + Decimal(self.get_delivery_estimate(obj))

@@ -8,5 +8,4 @@ urlpatterns = [
     path('update/', UpdateCartItemQuantityAPIView.as_view(), name='cart-update-item'),
     path('total/', CartTotalAPIView.as_view(), name='cart-total'),
     path('clear/', ClearCartAPIView.as_view(), name='cart-clear'),
-
 ]

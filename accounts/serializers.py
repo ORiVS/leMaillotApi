@@ -40,9 +40,11 @@ class RegisterUserSerializer(serializers.ModelSerializer):
 
         return user
 
-class RegisterVendorSerializer(serializers.Serializer):
-    vendor_name = serializers.CharField(max_length=100)
-    phone_number = serializers.CharField(max_length=20)
+class RegisterVendorSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Vendor
+        fields = ['vendor_name', 'description', 'address', 'city', 'latitude', 'longitude']
 
 class UserSerializer(serializers.ModelSerializer):
     role_display = serializers.CharField(source='get_role_display', read_only=True)

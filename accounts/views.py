@@ -19,6 +19,7 @@ from accounts.permissions import IsCustomer
 from django.core.mail import EmailMessage
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
+from rest_framework.permissions import AllowAny
 
 
 from .permissions import IsVendor
@@ -37,7 +38,9 @@ from .utils import send_verification_code_sms, send_verification_code_email
     responses={201: 'Utilisateur créé', 400: 'Erreur de validation'}
 )
 @api_view(['POST'])
+@permission_classes([AllowAny])
 def registerUser(request):
+
     serializer = RegisterUserSerializer(data=request.data, context={'request': request})
     if serializer.is_valid():
         serializer.save()
@@ -56,23 +59,15 @@ def registerVendor(request):
     user = request.user
 
     if user.role == 'VENDOR':
+
         return Response({'error': 'Vous êtes déjà vendeur.'}, status=400)
 
     serializer = RegisterVendorSerializer(data=request.data)
     if serializer.is_valid():
-        vendor_name = serializer.validated_data['vendor_name']
-        phone_number = serializer.validated_data['phone_number']
-
-        # Crée la boutique (Vendor)
-        Vendor.objects.create(
-            user=user,
-            user_profile=user.userprofile,
-            vendor_name=vendor_name,
-            phone_number=phone_number
-        )
+        serializer.save(user=user, user_profile=user.userprofile)
 
         # Met à jour le rôle
-        user.role = 'VENDOR'
+        user.role = User.VENDOR
         user.save()
 
         return Response({'message': 'Vous êtes maintenant vendeur.'}, status=200)
@@ -91,6 +86,7 @@ def registerVendor(request):
     responses={200: 'Connexion réussie', 401: 'Identifiants invalides'}
 )
 @api_view(['POST'])
+@permission_classes([AllowAny])
 def login(request):
     email = request.data.get('email')
     password = request.data.get('password')
@@ -253,6 +249,7 @@ def reset_password(request, uidb64, token):
     responses={200: 'Compte activé', 400: 'Code invalide'}
 )
 @api_view(['POST'])
+@permission_classes([AllowAny])
 def verify_code(request):
     email = request.data.get('email')
     code = request.data.get('code')

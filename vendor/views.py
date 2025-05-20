@@ -11,6 +11,7 @@ from rest_framework.views import APIView
 from rest_framework import status
 from .utils import haversine
 
+
 class VendorDetailAPIView(generics.RetrieveAPIView):
     queryset = Vendor.objects.filter(is_approved=True)
     serializer_class = VendorSerializer
@@ -23,6 +24,7 @@ class VendorDetailAPIView(generics.RetrieveAPIView):
         vendor_data = self.get_serializer(vendor).data
         vendor_data['products'] = product_data
         return Response(vendor_data)
+
 
 class VendorListCreateAPIView(generics.ListCreateAPIView):
     serializer_class = VendorSerializer
@@ -41,6 +43,7 @@ class VendorRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
 
     def get_queryset(self):
         return Vendor.objects.filter(user=self.request.user)
+
 
 class NearbyVendorsAPIView(APIView):
     def get(self, request):
@@ -61,6 +64,7 @@ class NearbyVendorsAPIView(APIView):
                     results.append(data)
 
         return Response(sorted(results, key=lambda x: x['distance_km']))
+
 
 class NearbyProductsAPIView(APIView):
     def get(self, request):

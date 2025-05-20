@@ -5,10 +5,14 @@ from accounts.models import User, UserProfile
 from accounts.utils import send_notification
 
 class Vendor (models.Model):
-    user = models.OneToOneField(User, related_name='user', on_delete=models.CASCADE)
-    user_profile = models.OneToOneField(UserProfile, related_name='userprofile', on_delete=models.CASCADE)
+    user = models.OneToOneField(User, related_name='vendor', on_delete=models.CASCADE, null=True, blank=True)
+    user_profile = models.OneToOneField(UserProfile, related_name='userprofile', on_delete=models.CASCADE, null=True, blank=True)
     vendor_name = models.CharField(max_length=50)
     vendor_license =models.ImageField(upload_to='vendor/license', null=True, blank=True)
+    address = models.TextField(null=True, blank=True)
+    city = models.CharField(max_length=100, null=True, blank=True)
+    description = models.TextField(null=True, blank=True)
+    logo = models.ImageField(upload_to='vendor/logos/', null=True, blank=True)
     is_approved = models.BooleanField(default=False)
     slug = models.SlugField(blank=True)
     latitude = models.FloatField(null=True, blank=True)

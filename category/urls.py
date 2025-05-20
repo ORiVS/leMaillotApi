@@ -14,5 +14,4 @@ urlpatterns = [
     path('products/<int:pk>/upload-images/', UploadMultipleProductImagesAPIView.as_view(),
          name='upload-multiple-images'),
     path('products/images/<int:pk>/update/', ProductImageUpdateAPIView.as_view(), name='update-product-image'),
-
 ]

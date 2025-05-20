@@ -11,6 +11,8 @@ from rest_framework.views import APIView
 
 from .models import Order, OrderItem, OrderStatusHistory
 from category.models import Product
+from decimal import Decimal
+
 
 
 class OrderItemSerializer(serializers.ModelSerializer):
@@ -111,7 +113,7 @@ class OrderCreateSerializer(serializers.ModelSerializer):
                 delivery_cost += float(vendor.delivery_fee)
 
         order.delivery_cost = delivery_cost
-        order.total_price = total_price + delivery_cost
+        order.total_price = Decimal(total_price) + Decimal(delivery_cost)
         order.save()
 
         return order
@@ -128,12 +130,13 @@ class OrderDetailSerializer(serializers.ModelSerializer):
     items = OrderItemSerializer(many=True, read_only=True)
     status_history = OrderStatusHistorySerializer(many=True, read_only=True)
     customer_email = serializers.EmailField(source='customer.email', read_only=True)
+    order_number = serializers.CharField(read_only=True)
 
     class Meta:
         model = Order
         fields = [
             'id', 'customer_email', 'total_price', 'delivery_cost', 'delivery_method',
-            'status', 'created_at', 'items', 'status_history'
+            'status', 'created_at', 'items', 'status_history', 'order_number'
         ]
 
 class VendorOrderDetailSerializer(serializers.ModelSerializer):

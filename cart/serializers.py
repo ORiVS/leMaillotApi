@@ -1,6 +1,8 @@
 from rest_framework import serializers
 from .models import CartItem, Cart
 from category.models import Product
+from decimal import Decimal
+
 
 
 class CartItemSerializer(serializers.ModelSerializer):
@@ -29,16 +31,14 @@ class CartSerializer(serializers.ModelSerializer):
         return sum(item.product.price * item.quantity for item in obj.items.all())
 
     def get_delivery_estimate(self, obj):
-        vendor_ids = set()
-        for item in obj.items.all():
-            vendor_ids.add(item.product.vendor.id)
+        vendor_ids = {item.product.vendor.id for item in obj.items.all()}
 
         from vendor.models import Vendor
-        total_delivery = 0.0
+        total_delivery = Decimal("0.0")
         for vid in vendor_ids:
             try:
                 vendor = Vendor.objects.get(id=vid)
-                total_delivery += float(vendor.delivery_fee)
+                total_delivery += vendor.delivery_fee or Decimal("0.0")
             except Vendor.DoesNotExist:
                 continue
         return total_delivery

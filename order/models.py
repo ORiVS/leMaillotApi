@@ -21,11 +21,22 @@ class Order(models.Model):
     delivery_method = models.CharField(max_length=20, choices=DELIVERY_CHOICES, default='pickup')
     delivery_latitude = models.FloatField(null=True, blank=True)
     delivery_longitude = models.FloatField(null=True, blank=True)
+    order_number = models.CharField(max_length=20, unique=True)
     delivery_cost = models.DecimalField(max_digits=6, decimal_places=2, default=0.0)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"Commande #{self.id} - {self.customer.email}"
+
+    def save(self, *args, **kwargs):
+        if not self.order_number:
+            self.order_number = self.generate_order_number()
+        super().save(*args, **kwargs)
+
+    def generate_order_number(self):
+        from datetime import datetime
+        date_str = datetime.now().strftime('%Y%m%d')
+        return f"CM-{date_str}-{str(self.pk).zfill(4)}"
 
 
 class OrderItem(models.Model):

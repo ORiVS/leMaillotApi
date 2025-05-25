@@ -214,7 +214,7 @@ class ExportOrderPDFAPIView(APIView):
         elements.append(Spacer(1, 12))
 
         # ✅ Infos client
-        elements.append(Paragraph(f"<b>Client :</b> {order.customer.get_full_name()} ({order.customer.email})", styles['Normal']))
+        elements.append(Paragraph(f"<b>Client :</b> {order.customer.first_name} {order.customer.last_name} ({order.customer.email})", styles['Normal']))
         elements.append(Paragraph(f"<b>Date :</b> {order.created_at.strftime('%d/%m/%Y %H:%M')}", styles['Normal']))
         elements.append(Spacer(1, 12))
 

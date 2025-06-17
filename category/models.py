@@ -70,3 +70,18 @@ class ProductImage(models.Model):
 
     def __str__(self):
         return f"Image de {self.product.product_name}"
+
+class ProductSize(models.Model):
+    SIZE_CHOICES = [
+        ('XS', 'XS'), ('S', 'S'), ('M', 'M'),
+        ('L', 'L'), ('XL', 'XL'), ('XXL', 'XXL'),
+    ]
+    product = models.ForeignKey('Product', on_delete=models.CASCADE, related_name='sizes')
+    size = models.CharField(max_length=5, choices=SIZE_CHOICES)
+    stock = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        unique_together = ('product', 'size')
+
+    def __str__(self):
+        return f"{self.product.product_name} - {self.size}"

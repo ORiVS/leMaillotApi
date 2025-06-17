@@ -1,6 +1,6 @@
 from django.urls import path
 from . import views
-from .views import PublicCategoryListAPIView, ProductListCreateAPIView, ProductRetrieveUpdateDestroyAPIView, PublicProductListAPIView, UploadProductImageAPIView, DeleteProductImageAPIView, ProductImageListAPIView, PublicProductImageListAPIView, UploadMultipleProductImagesAPIView, ProductImageUpdateAPIView, DeleteProductImageAPIView
+from .views import PublicCategoryListAPIView, ProductListCreateAPIView, ProductRetrieveUpdateDestroyAPIView, PublicProductListAPIView, UploadProductImageAPIView, PublicProductDetailAPIView, DeleteProductImageAPIView, ProductImageListAPIView, PublicProductImageListAPIView, UploadMultipleProductImagesAPIView, ProductImageUpdateAPIView, DeleteProductImageAPIView
 
 urlpatterns = [
     path('store/categories/', PublicCategoryListAPIView.as_view(), name='public-category-list'),
@@ -14,4 +14,6 @@ urlpatterns = [
     path('products/<int:pk>/upload-images/', UploadMultipleProductImagesAPIView.as_view(),
          name='upload-multiple-images'),
     path('products/images/<int:pk>/update/', ProductImageUpdateAPIView.as_view(), name='update-product-image'),
+    path('store/products/<int:pk>/', PublicProductDetailAPIView.as_view(), name='public-product-detail'),
+
 ]

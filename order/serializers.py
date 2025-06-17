@@ -8,11 +8,9 @@ from rest_framework import serializers
 from rest_framework.exceptions import NotFound
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
-
 from .models import Order, OrderItem, OrderStatusHistory
 from category.models import Product
 from decimal import Decimal
-
 
 
 class OrderItemSerializer(serializers.ModelSerializer):

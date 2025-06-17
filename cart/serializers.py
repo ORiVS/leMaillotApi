@@ -7,11 +7,26 @@ from decimal import Decimal
 
 class CartItemSerializer(serializers.ModelSerializer):
     product_name = serializers.CharField(source='product.product_name', read_only=True)
+    product_image = serializers.SerializerMethodField()
+    product_price = serializers.DecimalField(source='product.price', max_digits=10, decimal_places=2, read_only=True)
+    size = serializers.CharField()
 
     class Meta:
         model = CartItem
-        fields = ['id', 'product', 'product_name', 'quantity']
+        fields = ['id', 'product', 'product_name', 'product_image', 'product_price', 'quantity', 'size']
 
+    def get_product_image(self, obj):
+        request = self.context.get('request')
+        if obj.product.image:
+            return request.build_absolute_uri(obj.product.image.url)
+        return None
+
+
+    def get_product_image(self, obj):
+        request = self.context.get('request')
+        if obj.product.image:
+            return request.build_absolute_uri(obj.product.image.url)
+        return None
 
 class CartSerializer(serializers.ModelSerializer):
     items = CartItemSerializer(many=True, read_only=True)

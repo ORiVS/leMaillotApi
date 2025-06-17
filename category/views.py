@@ -2,12 +2,14 @@ from django.db.models import Q
 from rest_framework import generics, permissions, status
 from rest_framework.exceptions import PermissionDenied
 from accounts.permissions import IsVendor
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from .models import Category, Product, ProductImage
 from .serializers import CategorySerializer, ProductSerializer, ProductImageSerializer
 from rest_framework.views import APIView
 from rest_framework.parsers import MultiPartParser
-from rest_framework.generics import DestroyAPIView, UpdateAPIView
+from rest_framework.generics import DestroyAPIView, UpdateAPIView, RetrieveAPIView
+from rest_framework.renderers import JSONRenderer
+
 
 # 🔓 Vue publique pour afficher toutes les catégories
 class PublicCategoryListAPIView(generics.ListAPIView):
@@ -22,7 +24,7 @@ class BaseVendorProtectedView:
         except Exception:
             raise PermissionDenied("Aucun profil vendeur associé à ce compte.")
 
-# 🛒 CRUD des produits par les vendeurs
+
 class ProductListCreateAPIView(BaseVendorProtectedView, generics.ListCreateAPIView):
     serializer_class = ProductSerializer
     permission_classes = [IsVendor]
@@ -44,7 +46,8 @@ class ProductRetrieveUpdateDestroyAPIView(BaseVendorProtectedView, generics.Retr
 
 class PublicProductListAPIView(generics.ListAPIView):
     serializer_class = ProductSerializer
-    permission_classes = []  # Accès libre
+    permission_classes = []
+    renderer_classes = [JSONRenderer]
 
     def get_queryset(self):
         queryset = Product.objects.filter(is_available=True)
@@ -79,6 +82,9 @@ class PublicProductListAPIView(generics.ListAPIView):
             )
 
         return queryset.order_by('-created_at')
+
+    def get_serializer_context(self):
+        return {'request': self.request}
 
 class UploadProductImageAPIView(APIView):
     parser_classes = [MultiPartParser]
@@ -184,3 +190,11 @@ class ProductImageUpdateAPIView(UpdateAPIView):
         if image.product.vendor.user != self.request.user:
             raise PermissionDenied("Vous ne pouvez modifier que vos propres images")
         return image
+
+class PublicProductDetailAPIView(RetrieveAPIView):
+    queryset = Product.objects.filter(is_available=True)
+    serializer_class = ProductSerializer
+    permission_classes = [AllowAny]
+
+    def get_serializer_context(self):
+        return {'request': self.request}

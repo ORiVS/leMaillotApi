@@ -309,3 +309,22 @@ class VerifyOTPView(APIView):
             serializer.save()
             return Response({"detail": "Compte vérifié avec succès ✅"})
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['PUT', 'PATCH'])
+@permission_classes([IsAuthenticated])
+def update_profile(request):
+    user = request.user
+    user_data = request.data.get('user', {})
+    profile_data = request.data.get('profile', {})
+
+    user_serializer = UserSerializer(user, data=user_data, partial=True)
+    profile_serializer = UserProfileSerializer(user.userprofile, data=profile_data, partial=True)
+
+    if user_serializer.is_valid() and profile_serializer.is_valid():
+        user_serializer.save()
+        profile_serializer.save()
+        return Response({'message': 'Profil mis à jour avec succès.'})
+    return Response({
+        'user_errors': user_serializer.errors,
+        'profile_errors': profile_serializer.errors
+    }, status=400)

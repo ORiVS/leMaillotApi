@@ -10,5 +10,4 @@ urlpatterns = [
     path('admin/', AdminOrderListAPIView.as_view(), name='admin-orders'),
     path('<int:pk>/', CustomerOrderDetailAPIView.as_view(), name='customer-order-detail'),
     path('<int:pk>/export/', ExportOrderPDFAPIView.as_view(), name='export-order-pdf'),
-
 ]

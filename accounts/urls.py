@@ -22,5 +22,6 @@ urlpatterns = [
     path('resend-code/', resend_code, name='resend-code'),
 
     path('verify-otp/', VerifyOTPView.as_view(), name='verify-otp'),
+    path('update/', views.update_profile, name='update_profile'),
 
 ]

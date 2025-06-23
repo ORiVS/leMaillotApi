@@ -5,6 +5,7 @@ from .models import Order, OrderStatusHistory
 from vendor.models import Vendor
 from .serializers import OrderCreateSerializer, OrderDetailSerializer, VendorOrderDetailSerializer, OrderStatusUpdateSerializer, ExportOrderPDFAPIView
 from cart.models import CartItem
+from notifications.utils import notify_user
 
 class OrderCreateAPIView(generics.CreateAPIView):
     serializer_class = OrderCreateSerializer
@@ -34,6 +35,25 @@ class OrderCreateAPIView(generics.CreateAPIView):
             delivery_method=delivery_method,
             delivery_cost=delivery_cost,
         )
+
+        # Notification client
+        order = serializer.instance
+        notify_user(
+            user=user,
+            title="Commande confirmée",
+            message=f"Votre commande #{order.id} a été confirmée ✅",
+            type="ORDER"
+        )
+
+        # Notification vendeur(s)
+        vendors = set(item.product.vendor for item in CartItem.objects.filter(cart__user=user))
+        for vendor in vendors:
+            notify_user(
+                user=vendor.user,
+                title="Nouvelle commande",
+                message="Vous avez une nouvelle commande à traiter 📦",
+                type="ORDER"
+            )
 
 class OrderListAPIView(generics.ListAPIView):
     serializer_class = OrderDetailSerializer
@@ -74,7 +94,33 @@ class OrderStatusUpdateAPIView(generics.UpdateAPIView):
             changed_by=self.request.user
         )
 
-        serializer.save()  # met à jour le statut
+        serializer.save()
+
+        # Notification en fonction du nouveau statut
+        if new_status == "shipped":
+            notify_user(
+                user=order.customer,
+                title="Commande expédiée",
+                message=f"Bonne nouvelle ! Votre commande #{order.id} est en route 🚚",
+                type="ORDER"
+            )
+        elif new_status == "delivered":
+            notify_user(
+                user=order.customer,
+                title="Commande livrée",
+                message=f"Votre commande #{order.id} a été livrée 🎉",
+                type="ORDER"
+            )
+        elif new_status == "paid":
+            # Pour le vendeur (optionnel, selon qui paie)
+            for item in order.items.all():
+                vendor = item.product.vendor
+                notify_user(
+                    user=vendor.user,
+                    title="Paiement confirmé",
+                    message=f"Le paiement de la commande #{order.id} est validé 💰",
+                    type="ORDER"
+                )
 
 class VendorOrderListAPIView(generics.ListAPIView):
     serializer_class = OrderDetailSerializer
@@ -167,7 +213,6 @@ class AdminOrderListAPIView(generics.ListAPIView):
                 pass
 
         return queryset.order_by('-created_at')
-
 
 class CustomerOrderDetailAPIView(generics.RetrieveAPIView):
     serializer_class = OrderDetailSerializer

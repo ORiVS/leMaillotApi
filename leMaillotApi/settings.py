@@ -58,6 +58,7 @@ INSTALLED_APPS = [
     'drf_yasg',
     'cart',
     'corsheaders',
+    'notifications',
 ]
 
 MIDDLEWARE = [

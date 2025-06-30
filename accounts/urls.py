@@ -4,6 +4,7 @@ from .views import get_me, reset_password, forgot_password, verify_code, resend_
 
 urlpatterns = [
     path('registerUser/', views.registerUser, name='registerUser'),
+    
     path('registerVendor/', views.registerVendor, name='registerVendor'),
 
     path('login/', views.login, name='login'),
@@ -15,6 +16,7 @@ urlpatterns = [
     #path('activate/<uidb64>/<token>/', activate_account, name='activate'),
 
     path('forgot-password/', forgot_password, name='forgot-password'),
+    
     path('reset-password/<uidb64>/<token>/', reset_password, name='reset-password'),
 
     path('verify-code/', verify_code, name='verify-code'),
@@ -22,6 +24,6 @@ urlpatterns = [
     path('resend-code/', resend_code, name='resend-code'),
 
     path('verify-otp/', VerifyOTPView.as_view(), name='verify-otp'),
+    
     path('update/', views.update_profile, name='update_profile'),
-
 ]

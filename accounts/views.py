@@ -40,13 +40,13 @@ from .utils import send_verification_code_sms, send_verification_code_email
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def registerUser(request):
-
     serializer = RegisterUserSerializer(data=request.data, context={'request': request})
     if serializer.is_valid():
         serializer.save()
-        print(serializer.errors)
         return Response({'message': 'Utilisateur créé avec succès'}, status=status.HTTP_201_CREATED)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    else:
+        print("❌ Erreurs de validation :", serializer.errors)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @swagger_auto_schema(
     method='post',

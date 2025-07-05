@@ -21,6 +21,10 @@ class Order(models.Model):
         ('delivery', 'Livraison à domicile'),
     ]
     delivery_method = models.CharField(max_length=20, choices=DELIVERY_CHOICES, default='pickup')
+    delivery_address = models.CharField(max_length=255)    
+    delivery_city = models.CharField(max_length=100, blank=True, null=True)
+    delivery_postal_code = models.CharField(max_length=20, blank=True, null=True)
+    delivery_country = models.CharField(max_length=100, blank=True, null=True)
     delivery_latitude = models.FloatField(null=True, blank=True)
     delivery_longitude = models.FloatField(null=True, blank=True)
     order_number = models.CharField(max_length=20, unique=True)

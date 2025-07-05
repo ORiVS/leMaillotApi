@@ -25,6 +25,10 @@ class OrderItemSerializer(serializers.ModelSerializer):
 
 class OrderCreateSerializer(serializers.ModelSerializer):
     items = serializers.ListField(child=serializers.DictField(), write_only=True)
+    delivery_address = serializers.CharField(required=False, allow_blank=True)
+    delivery_city = serializers.CharField(required=False, allow_blank=True)
+    delivery_postal_code = serializers.CharField(required=False, allow_blank=True)
+    delivery_country = serializers.CharField(required=False, allow_blank=True)
     delivery_latitude = serializers.FloatField(required=False)
     delivery_longitude = serializers.FloatField(required=False)
 
@@ -32,7 +36,8 @@ class OrderCreateSerializer(serializers.ModelSerializer):
         model = Order
         fields = [
             'id', 'customer', 'status', 'delivery_method',
-             'delivery_latitude', 'delivery_longitude',
+            'delivery_address', 'delivery_city', 'delivery_postal_code', 'delivery_country',
+            'delivery_latitude', 'delivery_longitude',
             'delivery_cost', 'total_price', 'created_at', 'items'
         ]
         read_only_fields = ['customer', 'status', 'delivery_cost', 'total_price', 'created_at']
@@ -43,67 +48,78 @@ class OrderCreateSerializer(serializers.ModelSerializer):
         return items
 
     def validate(self, data):
-        if data.get("delivery_method") == "delivery":
-            if not data.get("delivery_latitude") or not data.get("delivery_longitude"):
-                raise serializers.ValidationError("Coordonnées GPS requises pour la livraison.")
+        user = self.context['request'].user
+        profile = getattr(user, 'userprofile', None)
+
+        # Fallback depuis le profil si champ manquant
+        data['delivery_address'] = data.get('delivery_address') or profile.address_line_1
+        data['delivery_city'] = data.get('delivery_city') or profile.city
+        data['delivery_postal_code'] = data.get('delivery_postal_code') or profile.pin_code
+        data['delivery_country'] = data.get('delivery_country') or profile.country
+        data['delivery_latitude'] = data.get('delivery_latitude') or profile.latitude
+        data['delivery_longitude'] = data.get('delivery_longitude') or profile.longitude
+
+        # Adresse obligatoire
+        if not data.get('delivery_address'):
+            raise serializers.ValidationError("L'adresse de livraison est obligatoire.")
+
         return data
 
     def create(self, validated_data):
         items_data = validated_data.pop('items')
         customer = self.context['request'].user
-        request = self.context.get('request')
 
-        delivery_method = request.data.get('delivery_method', 'pickup')
-        delivery_latitude = request.data.get('delivery_latitude')
-        delivery_longitude = request.data.get('delivery_longitude')
+        # Extraire les données d'adresse
+        delivery_address = validated_data.get('delivery_address')
+        delivery_city = validated_data.get('delivery_city')
+        delivery_postal_code = validated_data.get('delivery_postal_code')
+        delivery_country = validated_data.get('delivery_country')
+        delivery_latitude = validated_data.get('delivery_latitude')
+        delivery_longitude = validated_data.get('delivery_longitude')
+        delivery_method = validated_data.get('delivery_method')
 
         delivery_cost = 0.0
         total_price = 0
+        vendor_ids = set()
 
-        # ➕ Crée la commande vide, à compléter ensuite
+        # Création de la commande
         order = Order.objects.create(
             customer=customer,
             delivery_method=delivery_method,
+            delivery_address=delivery_address,
+            delivery_city=delivery_city,
+            delivery_postal_code=delivery_postal_code,
+            delivery_country=delivery_country,
             delivery_latitude=delivery_latitude,
             delivery_longitude=delivery_longitude,
             delivery_cost=0.0,
             total_price=0
         )
 
-        vendor_ids = set()
-
         for item in items_data:
             product_id = item.get('product')
             quantity = item.get('quantity', 1)
-
-            try:
-                product = Product.objects.get(id=product_id, is_available=True)
-            except Product.DoesNotExist:
-                raise serializers.ValidationError(f"Produit invalide ou indisponible : ID {product_id}")
+            product = Product.objects.get(id=product_id, is_available=True)
 
             if product.stock < quantity:
                 raise serializers.ValidationError(
                     f"Stock insuffisant pour le produit '{product.product_name}' (stock actuel : {product.stock})"
                 )
 
-            price = product.price
-            total_price += price * quantity
-
-            # ➕ Ajout de l'article
             OrderItem.objects.create(
                 order=order,
                 product=product,
                 quantity=quantity,
-                price=price
+                price=product.price
             )
 
-            # ➖ Mise à jour du stock
+            total_price += product.price * quantity
             product.stock -= quantity
             product.save()
 
             vendor_ids.add(product.vendor.id)
 
-        # 🛵 Frais de livraison si mode "delivery"
+        # Frais de livraison par vendeur si applicable
         if delivery_method == 'delivery':
             from vendor.models import Vendor
             for vid in vendor_ids:
@@ -111,7 +127,7 @@ class OrderCreateSerializer(serializers.ModelSerializer):
                 delivery_cost += float(vendor.delivery_fee)
 
         order.delivery_cost = delivery_cost
-        order.total_price = Decimal(total_price) + Decimal(delivery_cost)
+        order.total_price = total_price + delivery_cost
         order.save()
 
         return order
@@ -129,12 +145,17 @@ class OrderDetailSerializer(serializers.ModelSerializer):
     status_history = OrderStatusHistorySerializer(many=True, read_only=True)
     customer_email = serializers.EmailField(source='customer.email', read_only=True)
     order_number = serializers.CharField(read_only=True)
+    delivery_address = serializers.CharField()
+    delivery_city = serializers.CharField()
+    delivery_postal_code = serializers.CharField()
+    delivery_country = serializers.CharField()
 
     class Meta:
         model = Order
         fields = [
             'id', 'customer_email', 'total_price', 'delivery_cost', 'delivery_method',
-            'status', 'created_at', 'items', 'status_history', 'order_number'
+            'status', 'created_at', 'items', 'status_history', 'order_number', 'delivery_address', 'delivery_city', 'delivery_postal_code', 'delivery_country',
+        'delivery_latitude', 'delivery_longitude'
         ]
 
 class VendorOrderDetailSerializer(serializers.ModelSerializer):

@@ -25,7 +25,7 @@ class Category(models.Model):
 
 class Product(models.Model):
     vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name='products')
-    category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name='products')
+    categories = models.ManyToManyField(Category, related_name='products')
     product_name = models.CharField(max_length=255)
     slug = models.SlugField(unique=True)
     description = models.TextField(max_length=250, blank=True, null=True)

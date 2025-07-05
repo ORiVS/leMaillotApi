@@ -12,7 +12,7 @@ class WishlistViewSet(viewsets.ViewSet):
 
     def list(self, request):
         items = WishlistItem.objects.filter(user=request.user)
-        serializer = WishlistItemSerializer(items, many=True)
+        serializer = WishlistItemSerializer(items, many=True, context={'request': request})
         return Response(serializer.data)
 
     def create(self, request):
@@ -25,7 +25,7 @@ class WishlistViewSet(viewsets.ViewSet):
         item, created = WishlistItem.objects.get_or_create(user=request.user, product=product)
         if not created:
             return Response({'message': 'Already in wishlist'}, status=200)
-        return Response(WishlistItemSerializer(item).data, status=201)
+        return Response(WishlistItemSerializer(item, context={'request': request}).data, status=201)
 
     @action(detail=True, methods=['delete'])
     def remove(self, request, pk=None):

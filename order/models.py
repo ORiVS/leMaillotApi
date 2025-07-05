@@ -1,6 +1,8 @@
 from django.db import models
 from accounts.models import User
 from category.models import Product
+from django.utils import timezone
+import re
 
 class Order(models.Model):
     STATUS_CHOICES = [
@@ -34,9 +36,28 @@ class Order(models.Model):
         super().save(*args, **kwargs)
 
     def generate_order_number(self):
-        from datetime import datetime
-        date_str = datetime.now().strftime('%Y%m%d')
-        return f"CM-{date_str}-{str(self.pk).zfill(4)}"
+        today = timezone.now().strftime('%Y%m%d')
+        prefix = f"CM-{today}"
+
+        last_order = (
+            Order.objects
+            .filter(order_number__startswith=prefix)
+            .order_by('-created_at')
+            .first()
+        )
+
+        if last_order:
+            # Extraire le suffixe de type XX (CM-20250702-03)
+            match = re.search(rf"{prefix}-(\d+)", last_order.order_number)
+            if match:
+                last_seq = int(match.group(1))
+            else:
+                last_seq = 0
+        else:
+            last_seq = 0
+
+        new_seq = last_seq + 1
+        return f"{prefix}-{new_seq:02d}"
 
 
 class OrderItem(models.Model):

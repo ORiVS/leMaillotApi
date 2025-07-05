@@ -41,7 +41,7 @@ class OrderCreateAPIView(generics.CreateAPIView):
         notify_user(
             user=user,
             title="Commande confirmée",
-            message=f"Votre commande #{order.id} a été confirmée ✅",
+            message=f"Votre commande #{order.order_number} a été confirmée ✅",
             type="ORDER"
         )
 
@@ -101,14 +101,14 @@ class OrderStatusUpdateAPIView(generics.UpdateAPIView):
             notify_user(
                 user=order.customer,
                 title="Commande expédiée",
-                message=f"Bonne nouvelle ! Votre commande #{order.id} est en route 🚚",
+                message=f"Bonne nouvelle ! Votre commande #{order.order_number} est en route 🚚",
                 type="ORDER"
             )
         elif new_status == "delivered":
             notify_user(
                 user=order.customer,
                 title="Commande livrée",
-                message=f"Votre commande #{order.id} a été livrée 🎉",
+                message=f"Votre commande #{order.order_number} a été livrée 🎉",
                 type="ORDER"
             )
         elif new_status == "paid":
@@ -118,7 +118,7 @@ class OrderStatusUpdateAPIView(generics.UpdateAPIView):
                 notify_user(
                     user=vendor.user,
                     title="Paiement confirmé",
-                    message=f"Le paiement de la commande #{order.id} est validé 💰",
+                    message=f"Le paiement de la commande #{order.order_number} est validé 💰",
                     type="ORDER"
                 )
 

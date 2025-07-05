@@ -3,8 +3,6 @@ from .models import CartItem, Cart
 from category.models import Product
 from decimal import Decimal
 
-
-
 class CartItemSerializer(serializers.ModelSerializer):
     product_name = serializers.CharField(source='product.product_name', read_only=True)
     product_image = serializers.SerializerMethodField()
@@ -21,24 +19,19 @@ class CartItemSerializer(serializers.ModelSerializer):
             return request.build_absolute_uri(obj.product.image.url)
         return None
 
-
-    def get_product_image(self, obj):
-        request = self.context.get('request')
-        if obj.product.image:
-            return request.build_absolute_uri(obj.product.image.url)
-        return None
-
 class CartSerializer(serializers.ModelSerializer):
     items = CartItemSerializer(many=True, read_only=True)
     total_products = serializers.SerializerMethodField()
     delivery_estimate = serializers.SerializerMethodField()
     estimated_total = serializers.SerializerMethodField()
+    total_items = serializers.SerializerMethodField()  # 👈 AJOUT ICI
 
     class Meta:
         model = Cart
         fields = [
             'id', 'user', 'items', 'created_at',
-            'total_products', 'delivery_estimate', 'estimated_total'
+            'total_products', 'delivery_estimate', 'estimated_total',
+            'total_items'  # 👈 AJOUT ICI
         ]
         read_only_fields = ['user', 'created_at']
 
@@ -60,3 +53,6 @@ class CartSerializer(serializers.ModelSerializer):
 
     def get_estimated_total(self, obj):
         return self.get_total_products(obj) + Decimal(self.get_delivery_estimate(obj))
+
+    def get_total_items(self, obj):  # 👈 AJOUT ICI
+        return sum(item.quantity for item in obj.items.all())

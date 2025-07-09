@@ -19,13 +19,9 @@ from dotenv import load_dotenv
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-env_file = ".env.docker" if os.environ.get("IS_DOCKER", "False") == "True" else ".env.local"
-config = AutoConfig(search_path=BASE_DIR)
-env_file_path = BASE_DIR / env_file
-load_dotenv(dotenv_path=env_file_path)
+from decouple import config
 
-os.environ["ENV_FILE"] = str(BASE_DIR / env_file)
-print("ENV FILE LOADED:", os.environ["ENV_FILE"])
+# Ne pas charger de fichier .env, Railway injecte les variables automatiquement
 
 
 # Quick-start development settings - unsuitable for production

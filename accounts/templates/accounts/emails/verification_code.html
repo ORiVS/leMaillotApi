@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Code de vérification</title>
+</head>
+<body style="font-family: Arial, sans-serif; background: #f4f4f4; padding: 20px; margin: 0;">
+  <div style="max-width: 600px; margin: auto; background: #ffffff; border-radius: 10px; padding: 30px;">
+    
+    <div style="text-align: center; margin-bottom: 20px;">
+      <img src="cid:lemaillot_logo" alt="Logo LeMaillot" style="max-height: 200px;" />
+    </div>
+
+    <h2>Bonjour {{ user.first_name }} 👋</h2>
+
+    <p>Voici votre code de vérification pour activer votre compte sur <strong>LeMaillot</strong> :</p>
+
+    <p style="font-size: 24px; font-weight: bold; color: #0b7d48; text-align: center;">
+      {{ user.verification_code }}
+    </p>
+
+    <p style="margin-top: 40px; text-align: right;">— L’équipe LeMaillot ⚽</p>
+    <div style="text-align: center; font-size: 13px; color: #999; margin-top: 10px;">
+      Soutenir un club, porter son maillot.
+    </div>
+  </div>
+</body>
+</html>

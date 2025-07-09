@@ -17,6 +17,7 @@ from datetime import timedelta
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 from decouple import config
+import dj_database_url
 
 # Ne pas charger de fichier .env, Railway injecte les variables automatiquement
 
@@ -93,18 +94,9 @@ WSGI_APPLICATION = 'leMaillotApi.wsgi.application'
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': config('POSTGRES_DB'),
-        'USER': config('POSTGRES_USER'),
-        'PASSWORD': config('POSTGRES_PASSWORD'),
-        'HOST': config('POSTGRES_HOST'),
-        'PORT': config('POSTGRES_PORT'),
-        'TEST': {
-            'NAME': 'test_lemaillot'
-        }
-    }
+    'default': dj_database_url.config(default=config('DATABASE_URL'))
 }
+
 
 AUTH_USER_MODEL = 'accounts.User'
 
@@ -167,7 +159,7 @@ TWILIO_AUTH_TOKEN = config("TWILIO_AUTH_TOKEN")
 TWILIO_PHONE_NUMBER = config("TWILIO_PHONE_NUMBER")
 
 STRIPE_SECRET_KEY = config("STRIPE_SECRET_KEY")
-STRIPE_WEBHOOK_KEY = config("STRIPE_WEBHOOK_KEY", default="dummy_webhook", cast=str)
+STRIPE_WEBHOOK_SECRET = config("STRIPE_WEBHOOK_SECRET")
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [

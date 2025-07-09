@@ -94,15 +94,9 @@ WSGI_APPLICATION = 'leMaillotApi.wsgi.application'
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': config('POSTGRES_DB'),
-        'USER': config('POSTGRES_USER'),
-        'PASSWORD': config('POSTGRES_PASSWORD'),
-        'HOST': config('POSTGRES_HOST'),
-        'PORT': config('POSTGRES_PORT'),
-    }
+    'default': dj_database_url.config(default=config('DATABASE_URL'))
 }
+
 
 
 AUTH_USER_MODEL = 'accounts.User'

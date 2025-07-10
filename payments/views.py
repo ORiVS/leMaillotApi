@@ -8,6 +8,8 @@ from order.models import Order
 from django.views.decorators.csrf import csrf_exempt
 from django.http import HttpResponse
 from payments.serializers import PaymentSerializer
+from django.utils.timezone import now
+
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
 

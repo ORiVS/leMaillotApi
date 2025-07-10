@@ -37,13 +37,22 @@ schema_view = get_schema_view(
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+
+    # Authentification
     path('accounts/', include('accounts.urls')),
+
+    # API
     path('api/', include('category.urls')),
+    path('api/', include('notifications.urls')),
+    path('api/', include('wishlist.urls')),
+    path('api/payments/', include('payments.urls')),
+
+    # Modules à part
     path('vendors/', include('vendor.urls')),
     path('orders/', include('order.urls')),
     path('cart/', include('cart.urls')),
-    path('api/', include('notifications.urls')),
-    path('api/', include('wishlist.urls')),
+
+    # Docs Swagger
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
     path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
 ]

@@ -193,3 +193,9 @@ LOGGING = {
         'level': 'DEBUG',
     },
 }
+
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+    'accounts.backends.EmailAuthBackend',
+]
+

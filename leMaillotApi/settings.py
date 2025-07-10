@@ -199,3 +199,7 @@ AUTHENTICATION_BACKENDS = [
     'accounts.backends.EmailAuthBackend',
 ]
 
+CSRF_TRUSTED_ORIGINS = [
+    "https://lemaillotapi-production.up.railway.app"
+]
+

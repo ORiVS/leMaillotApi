@@ -12,29 +12,8 @@ class OrderCreateAPIView(generics.CreateAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def perform_create(self, serializer):
+        order = serializer.save()
         user = self.request.user
-        delivery_method = self.request.data.get('delivery_method', 'pickup')
-        delivery_cost = 0.0
-
-        if delivery_method == 'delivery':
-            # Récupérer les produits du panier de l'utilisateur
-            cart_items = CartItem.objects.filter(cart__user=user)
-
-            # Calculer les frais par vendeur unique
-            vendor_ids = set()
-            for item in cart_items:
-                vendor_ids.add(item.product.vendor.id)
-
-            for vid in vendor_ids:
-                vendor = Vendor.objects.get(id=vid)
-                delivery_cost += float(vendor.delivery_fee)
-
-        # Sauvegarder la commande avec les données de livraison
-        serializer.save(
-            customer=user,
-            delivery_method=delivery_method,
-            delivery_cost=delivery_cost,
-        )
 
         # Notification client
         order = serializer.instance

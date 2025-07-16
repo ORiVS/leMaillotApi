@@ -76,7 +76,11 @@ def stripe_webhook(request):
         print(f"📧 Email client : {customer_email}")
 
         try:
-            order = Order.objects.get(id=order_id)
+            try:
+                order = Order.objects.get(id=order_id)
+            except Order.DoesNotExist:
+                print(f"❌ Commande avec ID {order_id} introuvable")
+                return HttpResponse(status=404)
             print(f"🔍 Commande trouvée : {order}")
             order.status = "confirmed"
             order.save()

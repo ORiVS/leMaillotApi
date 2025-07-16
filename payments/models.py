@@ -18,7 +18,7 @@ class Payment(models.Model):
     ]
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="payments")
-    order = models.OneToOneField(Order, on_delete=models.CASCADE, related_name="payment")
+    order = models.OneToOneField(Order, on_delete=models.CASCADE, related_name="payment", null=False, blank=False,)
     payment_intent_id = models.CharField(max_length=100, blank=True, null=True)
     stripe_session_id = models.CharField(max_length=200, blank=True, null=True)
     amount = models.DecimalField(max_digits=10, decimal_places=2)

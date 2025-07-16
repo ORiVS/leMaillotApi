@@ -2,7 +2,12 @@ from rest_framework import serializers
 from payments.models import Payment
 
 class PaymentSerializer(serializers.ModelSerializer):
-    order_number = serializers.CharField(source="order.order_number", read_only=True)
+    order_number = serializers.SerializerMethodField()
+
+    def get_order_number(self, obj):
+        if obj.order:
+            return obj.order.order_number
+        return None
 
     class Meta:
         model = Payment

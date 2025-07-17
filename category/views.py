@@ -9,6 +9,7 @@ from rest_framework.views import APIView
 from rest_framework.parsers import MultiPartParser
 from rest_framework.generics import DestroyAPIView, UpdateAPIView, RetrieveAPIView
 from rest_framework.renderers import JSONRenderer
+from rest_framework.decorators import api_view
 
 # 🔓 Vue publique pour afficher toutes les catégories
 class PublicCategoryListAPIView(generics.ListAPIView):

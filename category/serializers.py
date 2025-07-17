@@ -98,4 +98,11 @@ class ProductReviewSerializer(serializers.ModelSerializer):
         }
 
     def create(self, validated_data):
-        return ProductReview.objects.create(**validated_data, user=self.context['request'].user)
+        product_id = self.context['view'].kwargs.get('product_id')
+        product = Product.objects.get(pk=product_id)
+        return ProductReview.objects.create(
+            user=self.context['request'].user,
+            product=product,
+            **validated_data
+        )
+

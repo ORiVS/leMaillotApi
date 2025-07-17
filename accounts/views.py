@@ -183,6 +183,7 @@ def activate_account(request, uidb64, token):
     responses={200: 'Email envoyé', 404: 'Utilisateur introuvable'}
 )
 @api_view(['POST'])
+@permission_classes([AllowAny])
 def forgot_password(request):
     email = request.data.get('email')
     if not email:

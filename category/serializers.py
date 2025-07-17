@@ -1,6 +1,6 @@
 from rest_framework import serializers
 import json
-from .models import Category, Product, ProductImage, ProductSize
+from .models import Category, Product, ProductImage, ProductSize, ProductReview
 
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
@@ -82,3 +82,20 @@ class ProductSerializer(serializers.ModelSerializer):
             ProductImage.objects.create(product=product, image=file)
 
         return product
+
+class ProductReviewSerializer(serializers.ModelSerializer):
+    user = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = ProductReview
+        fields = ['id', 'user', 'product', 'rating', 'comment', 'created_at']
+        read_only_fields = ['id', 'user', 'created_at', 'product']
+
+    def get_user(self, obj):
+        return {
+            "id": obj.user.id,
+            "username": obj.user.username
+        }
+
+    def create(self, validated_data):
+        return ProductReview.objects.create(**validated_data, user=self.context['request'].user)

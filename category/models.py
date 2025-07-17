@@ -1,7 +1,7 @@
 from django.db import models
 from django.utils.text import slugify
 from vendor.models import Vendor
-
+from django.core.validators import MinValueValidator, MaxValueValidator
 
 class Category(models.Model):
     category_name = models.CharField(max_length=50)
@@ -85,3 +85,18 @@ class ProductSize(models.Model):
 
     def __str__(self):
         return f"{self.product.product_name} - {self.size}"
+
+class ProductReview(models.Model):
+    user = models.ForeignKey('accounts.User', on_delete=models.CASCADE)
+    product = models.ForeignKey('category.Product', on_delete=models.CASCADE, related_name='reviews')
+    rating = models.PositiveSmallIntegerField(validators=[MinValueValidator(1), MaxValueValidator(5)])
+    comment = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('user', 'product')
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.user.username} - {self.product.product_name} ({self.rating}★)"

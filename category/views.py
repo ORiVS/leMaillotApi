@@ -1,15 +1,14 @@
 from django.db.models import Q
-from rest_framework import generics, permissions, status
-from rest_framework.exceptions import PermissionDenied
+from rest_framework import generics, permissions, status, viewsets
+from rest_framework.exceptions import PermissionDenied, ValidationError
 from accounts.permissions import IsVendor
 from rest_framework.permissions import IsAuthenticated, AllowAny
-from .models import Category, Product, ProductImage
-from .serializers import CategorySerializer, ProductSerializer, ProductImageSerializer
+from .models import Category, Product, ProductImage, ProductReview
+from .serializers import CategorySerializer, ProductSerializer, ProductImageSerializer, ProductReviewSerializer
 from rest_framework.views import APIView
 from rest_framework.parsers import MultiPartParser
 from rest_framework.generics import DestroyAPIView, UpdateAPIView, RetrieveAPIView
 from rest_framework.renderers import JSONRenderer
-
 
 # 🔓 Vue publique pour afficher toutes les catégories
 class PublicCategoryListAPIView(generics.ListAPIView):
@@ -200,3 +199,44 @@ class PublicProductDetailAPIView(RetrieveAPIView):
     def get_serializer_context(self):
         return {'request': self.request}
 
+
+class ProductReviewViewSet(viewsets.ModelViewSet):
+    serializer_class = ProductReviewSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return ProductReview.objects.filter(product_id=self.kwargs['product_id'])
+
+    def perform_create(self, serializer):
+        product_id = self.kwargs['product_id']
+        if ProductReview.objects.filter(user=self.request.user, product_id=product_id).exists():
+            raise ValidationError("Vous avez déjà laissé un avis pour ce produit.")
+        serializer.save(product_id=product_id)
+
+    def perform_update(self, serializer):
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        if instance.user != self.request.user:
+            raise PermissionDenied("Vous ne pouvez pas supprimer cet avis.")
+        instance.delete()
+
+    def get_object(self):
+        obj = super().get_object()
+        if self.request.method in ['PUT', 'PATCH', 'DELETE']:
+            if obj.user != self.request.user:
+                raise PermissionDenied("Vous ne pouvez modifier que vos propres avis.")
+        return obj
+
+
+@api_view(['GET'])
+def review_summary(request, product_id):
+    reviews = ProductReview.objects.filter(product_id=product_id)
+    average = reviews.aggregate(avg=Avg('rating'))['avg'] or 0
+    total = reviews.count()
+    distribution = reviews.values('rating').annotate(count=Count('id')).order_by('-rating')
+    return Response({
+        "average_rating": round(average, 2),
+        "total_reviews": total,
+        "distribution": {item['rating']: item['count'] for item in distribution}
+    })

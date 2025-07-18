@@ -203,7 +203,11 @@ class PublicProductDetailAPIView(RetrieveAPIView):
 
 class ProductReviewViewSet(viewsets.ModelViewSet):
     serializer_class = ProductReviewSerializer
-    permission_classes = [permissions.IsAuthenticated]
+
+    def get_permissions(self):
+        if self.request.method in ['GET']:
+            return [AllowAny()]
+        return [IsAuthenticated()]
 
     def get_queryset(self):
         return ProductReview.objects.filter(product_id=self.kwargs['product_id'])
@@ -231,6 +235,7 @@ class ProductReviewViewSet(viewsets.ModelViewSet):
 
 
 @api_view(['GET'])
+
 def review_summary(request, product_id):
     reviews = ProductReview.objects.filter(product_id=product_id)
     average = reviews.aggregate(avg=Avg('rating'))['avg'] or 0
